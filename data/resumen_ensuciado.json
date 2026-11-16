@@ -1,0 +1,83 @@
+{
+  "semilla": 20261116,
+  "archivos": {
+    "afluencia_diaria_historico.csv": {
+      "filas_originales": 46784,
+      "filas_csv": 47764,
+      "tipos": 688,
+      "duplicado": 980,
+      "incorrectos": 703,
+      "nulos": 1191,
+      "formatos": 712,
+      "clave_huerfana": 227,
+      "categorias": 206,
+      "outliers": 249,
+      "bytes": 6390422
+    },
+    "reservas_diarias_historico.csv": {
+      "filas_originales": 93568,
+      "filas_csv": 95451,
+      "duplicado": 1883,
+      "formatos": 1418,
+      "incorrectos": 1401,
+      "tipos": 1450,
+      "nulos": 2362,
+      "categorias": 455,
+      "outliers": 483,
+      "clave_huerfana": 426,
+      "bytes": 9384611
+    },
+    "rendimiento_platos_historico.csv": {
+      "filas_originales": 561408,
+      "filas_csv": 572581,
+      "formatos": 8314,
+      "incorrectos": 8326,
+      "outliers": 2783,
+      "duplicado": 11173,
+      "nulos": 14115,
+      "tipos": 8518,
+      "clave_huerfana": 2812,
+      "categorias": 2730,
+      "bytes": 70162882
+    },
+    "afluencia_diaria_lote_drift.csv": {
+      "filas_originales": 11584,
+      "filas_csv": 11825,
+      "tipos": 165,
+      "duplicado": 241,
+      "categorias": 57,
+      "formatos": 183,
+      "nulos": 284,
+      "incorrectos": 173,
+      "outliers": 57,
+      "clave_huerfana": 55,
+      "bytes": 1592994
+    },
+    "reservas_diarias_lote_drift.csv": {
+      "filas_originales": 23168,
+      "filas_csv": 23639,
+      "incorrectos": 335,
+      "nulos": 524,
+      "formatos": 349,
+      "clave_huerfana": 122,
+      "tipos": 323,
+      "duplicado": 471,
+      "outliers": 111,
+      "categorias": 124,
+      "bytes": 2325591
+    },
+    "rendimiento_platos_lote_drift.csv": {
+      "filas_originales": 139008,
+      "filas_csv": 141723,
+      "duplicado": 2715,
+      "formatos": 2116,
+      "clave_huerfana": 730,
+      "tipos": 2075,
+      "incorrectos": 2022,
+      "outliers": 659,
+      "nulos": 3394,
+      "categorias": 682,
+      "bytes": 17379489
+    }
+  }
+}
