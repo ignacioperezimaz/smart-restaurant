@@ -1,0 +1,642 @@
+{
+  "semilla": 20261117,
+  "descripcion": "Datos sintéticos de restauración (generar_datasets.py) y errores inyectados a propósito.",
+  "periodos": {
+    "historico": {
+      "desde": "2024-01-01",
+      "hasta": "2025-12-31",
+      "dias": 731,
+      "drift": false
+    },
+    "lote_drift": {
+      "desde": "2026-01-01",
+      "hasta": "2026-06-30",
+      "dias": 181,
+      "drift": true
+    }
+  },
+  "restaurantes": {
+    "validos": 24,
+    "primero": "RST-0001",
+    "ultimo": "RST-0024",
+    "id_huerfano_inyectado": "RST-9999"
+  },
+  "clientes": {
+    "pool": 9000,
+    "formato_id": "CLI-NNNNN",
+    "nota": "Identificadores seudonimizados sintéticos; no hay datos personales."
+  },
+  "platos": 20,
+  "nota_conteo": "\"filas_csv\" = \"filas_originales\" + \"duplicado\". Los tipos de error aleatorios son disjuntos entre sí (como máximo uno por fila).",
+  "notas_errores_sistematicos": {
+    "escala_thefork": "Error SISTEMÁTICO (no aleatorio) en resenas: TheFork puntúa de 2 a 10 (el doble) y las demás plataformas de 1 a 5. Hay que reescalar."
+  },
+  "definicion_errores": {
+    "nulos": "Un campo vacío o con los marcadores '', 'NA', 'NULL' o 'sin dato'.",
+    "tipos": "Texto no numérico en una columna numérica (p. ej. \"muchos\", \"sesenta\", \"cinco\").",
+    "incorrectos": "Valor imposible (negativos, mes 14, 29 horas de apertura, día \"Funday\", hora 27:90, puntuación 11…).",
+    "outliers": "Valor numérico extremo, fuera de todo rango razonable (p. ej. 9500 clientes o puntuación 55).",
+    "formatos": "Formato distinto al estándar: fechas dd/mm/yyyy, yyyy/mm/dd, dd-mm-yyyy o la fecha imposible 31/02/2025; decimales con coma; símbolo €; horas \"21.00 h\"; texto en mayúsculas con espacios.",
+    "clave_huerfana": "id_restaurante sustituido por 'RST-9999', que no existe como restaurante real.",
+    "categorias": "Categoría con espacios sobrantes y en mayúsculas (p. ej. \"  BISTRÓ  \").",
+    "duplicado": "Fila idéntica repetida justo a continuación (mismo id_registro)."
+  },
+  "archivos": {
+    "afluencia_diaria_historico.csv": {
+      "fuente": "afluencia_diaria",
+      "lote": "historico",
+      "descripcion": "Clientes reales por restaurante y día (con y sin reserva), con clima previsto y calendario",
+      "granularidad": "restaurante + día",
+      "clave_primaria": "id_registro",
+      "n_columnas": 19,
+      "columnas": [
+        "id_registro",
+        "id_restaurante",
+        "fecha_servicio",
+        "ciudad",
+        "provincia",
+        "tipo_restaurante",
+        "capacidad_asientos",
+        "dia_semana",
+        "mes",
+        "temporada",
+        "festivo_simulado",
+        "evento_local_previsto",
+        "temperatura_prevista_c",
+        "lluvia_prevista_mm",
+        "horas_apertura_planificadas",
+        "fecha_corte_prediccion",
+        "clientes_reales",
+        "clientes_con_reserva_reales",
+        "clientes_sin_reserva_reales"
+      ],
+      "filas_originales": 17544,
+      "filas_csv": 17892,
+      "nulos": 456,
+      "formatos": 266,
+      "incorrectos": 262,
+      "tipos": 247,
+      "duplicado": 348,
+      "clave_huerfana": 98,
+      "categorias": 89,
+      "outliers": 85,
+      "bytes": 2417003,
+      "filas_con_error_de_campo": 1503,
+      "columnas_afectadas_por_error": {
+        "nulos": [
+          "capacidad_asientos",
+          "ciudad",
+          "clientes_reales",
+          "horas_apertura_planificadas",
+          "temperatura_prevista_c"
+        ],
+        "tipos": [
+          "capacidad_asientos",
+          "clientes_reales",
+          "festivo_simulado",
+          "lluvia_prevista_mm"
+        ],
+        "incorrectos": [
+          "capacidad_asientos",
+          "clientes_reales",
+          "dia_semana",
+          "horas_apertura_planificadas",
+          "mes"
+        ],
+        "outliers": [
+          "clientes_reales",
+          "lluvia_prevista_mm",
+          "temperatura_prevista_c"
+        ],
+        "formatos": [
+          "ciudad",
+          "fecha_corte_prediccion",
+          "fecha_servicio",
+          "temperatura_prevista_c"
+        ],
+        "clave_huerfana": [
+          "id_restaurante"
+        ],
+        "categorias": [
+          "temporada",
+          "tipo_restaurante"
+        ],
+        "duplicado": []
+      }
+    },
+    "reservas_historico.csv": {
+      "fuente": "reservas",
+      "lote": "historico",
+      "descripcion": "Una fila por reserva: antelación, grupo, canal, historial del cliente y resultado final",
+      "granularidad": "una reserva",
+      "clave_primaria": "id_registro",
+      "n_columnas": 13,
+      "columnas": [
+        "id_registro",
+        "id_restaurante",
+        "fecha_servicio",
+        "turno",
+        "hora_reserva",
+        "comensales",
+        "antelacion_dias",
+        "canal",
+        "id_cliente",
+        "reservas_previas_cliente",
+        "cancelaciones_previas_cliente",
+        "no_shows_previos_cliente",
+        "estado_final"
+      ],
+      "filas_originales": 230893,
+      "filas_csv": 235564,
+      "incorrectos": 3355,
+      "duplicado": 4671,
+      "formatos": 3442,
+      "outliers": 1167,
+      "nulos": 5861,
+      "tipos": 3496,
+      "clave_huerfana": 1125,
+      "categorias": 1133,
+      "bytes": 22307952,
+      "filas_con_error_de_campo": 19579,
+      "columnas_afectadas_por_error": {
+        "nulos": [
+          "antelacion_dias",
+          "canal",
+          "comensales",
+          "estado_final",
+          "hora_reserva",
+          "id_cliente",
+          "turno"
+        ],
+        "tipos": [
+          "antelacion_dias",
+          "cancelaciones_previas_cliente",
+          "comensales"
+        ],
+        "incorrectos": [
+          "antelacion_dias",
+          "comensales",
+          "estado_final",
+          "hora_reserva"
+        ],
+        "outliers": [
+          "antelacion_dias",
+          "comensales",
+          "reservas_previas_cliente"
+        ],
+        "formatos": [
+          "comensales",
+          "fecha_servicio",
+          "hora_reserva",
+          "turno"
+        ],
+        "clave_huerfana": [
+          "id_restaurante"
+        ],
+        "categorias": [
+          "canal",
+          "estado_final",
+          "turno"
+        ],
+        "duplicado": []
+      }
+    },
+    "rendimiento_platos_historico.csv": {
+      "fuente": "rendimiento_platos",
+      "lote": "historico",
+      "descripcion": "Ventas, coste y margen por restaurante, día y plato",
+      "granularidad": "restaurante + día + plato",
+      "clave_primaria": "id_registro",
+      "n_columnas": 14,
+      "columnas": [
+        "id_registro",
+        "id_restaurante",
+        "fecha_servicio",
+        "id_plato",
+        "nombre_plato",
+        "categoria",
+        "ofertado",
+        "precio_unitario_eur",
+        "coste_unitario_eur",
+        "unidades_vendidas",
+        "descuento_medio_pct",
+        "ventas_netas_eur",
+        "coste_total_eur",
+        "margen_contribucion_eur"
+      ],
+      "filas_originales": 350880,
+      "formatos": 5324,
+      "filas_csv": 357759,
+      "incorrectos": 5273,
+      "tipos": 5227,
+      "duplicado": 6879,
+      "nulos": 8781,
+      "clave_huerfana": 1744,
+      "categorias": 1822,
+      "outliers": 1774,
+      "bytes": 41711866,
+      "filas_con_error_de_campo": 29945,
+      "columnas_afectadas_por_error": {
+        "nulos": [
+          "categoria",
+          "coste_unitario_eur",
+          "id_plato",
+          "nombre_plato",
+          "precio_unitario_eur",
+          "unidades_vendidas"
+        ],
+        "tipos": [
+          "coste_unitario_eur",
+          "ofertado",
+          "precio_unitario_eur",
+          "unidades_vendidas"
+        ],
+        "incorrectos": [
+          "coste_total_eur",
+          "coste_unitario_eur",
+          "descuento_medio_pct",
+          "precio_unitario_eur",
+          "unidades_vendidas"
+        ],
+        "outliers": [
+          "coste_unitario_eur",
+          "precio_unitario_eur",
+          "unidades_vendidas"
+        ],
+        "formatos": [
+          "coste_unitario_eur",
+          "fecha_servicio",
+          "nombre_plato",
+          "precio_unitario_eur"
+        ],
+        "clave_huerfana": [
+          "id_restaurante"
+        ],
+        "categorias": [
+          "categoria",
+          "nombre_plato"
+        ],
+        "duplicado": []
+      }
+    },
+    "resenas_historico.csv": {
+      "fuente": "resenas",
+      "lote": "historico",
+      "descripcion": "Reseñas de clientes (plataforma, puntuación y comentario en texto) asociadas a un plato",
+      "granularidad": "una reseña",
+      "clave_primaria": "id_registro",
+      "n_columnas": 8,
+      "columnas": [
+        "id_registro",
+        "id_restaurante",
+        "fecha_visita",
+        "fecha_resena",
+        "plataforma",
+        "id_plato",
+        "puntuacion",
+        "comentario"
+      ],
+      "filas_originales": 22434,
+      "filas_csv": 22892,
+      "nulos": 581,
+      "incorrectos": 379,
+      "categorias": 120,
+      "outliers": 117,
+      "formatos": 330,
+      "tipos": 356,
+      "duplicado": 458,
+      "clave_huerfana": 135,
+      "bytes": 3913394,
+      "filas_con_error_de_campo": 2018,
+      "columnas_afectadas_por_error": {
+        "nulos": [
+          "comentario",
+          "fecha_resena",
+          "id_plato",
+          "plataforma",
+          "puntuacion"
+        ],
+        "tipos": [
+          "puntuacion"
+        ],
+        "incorrectos": [
+          "puntuacion"
+        ],
+        "outliers": [
+          "puntuacion"
+        ],
+        "formatos": [
+          "comentario",
+          "fecha_resena",
+          "fecha_visita",
+          "plataforma"
+        ],
+        "clave_huerfana": [
+          "id_restaurante"
+        ],
+        "categorias": [
+          "plataforma"
+        ],
+        "duplicado": []
+      }
+    },
+    "afluencia_diaria_lote_drift.csv": {
+      "fuente": "afluencia_diaria",
+      "lote": "lote_drift",
+      "descripcion": "Clientes reales por restaurante y día (con y sin reserva), con clima previsto y calendario",
+      "granularidad": "restaurante + día",
+      "clave_primaria": "id_registro",
+      "n_columnas": 19,
+      "columnas": [
+        "id_registro",
+        "id_restaurante",
+        "fecha_servicio",
+        "ciudad",
+        "provincia",
+        "tipo_restaurante",
+        "capacidad_asientos",
+        "dia_semana",
+        "mes",
+        "temporada",
+        "festivo_simulado",
+        "evento_local_previsto",
+        "temperatura_prevista_c",
+        "lluvia_prevista_mm",
+        "horas_apertura_planificadas",
+        "fecha_corte_prediccion",
+        "clientes_reales",
+        "clientes_con_reserva_reales",
+        "clientes_sin_reserva_reales"
+      ],
+      "filas_originales": 4344,
+      "filas_csv": 4420,
+      "categorias": 27,
+      "tipos": 59,
+      "outliers": 24,
+      "formatos": 74,
+      "duplicado": 76,
+      "nulos": 103,
+      "incorrectos": 57,
+      "clave_huerfana": 19,
+      "bytes": 600531,
+      "filas_con_error_de_campo": 363,
+      "columnas_afectadas_por_error": {
+        "nulos": [
+          "capacidad_asientos",
+          "ciudad",
+          "clientes_reales",
+          "horas_apertura_planificadas",
+          "temperatura_prevista_c"
+        ],
+        "tipos": [
+          "capacidad_asientos",
+          "clientes_reales",
+          "festivo_simulado",
+          "lluvia_prevista_mm"
+        ],
+        "incorrectos": [
+          "capacidad_asientos",
+          "clientes_reales",
+          "dia_semana",
+          "horas_apertura_planificadas",
+          "mes"
+        ],
+        "outliers": [
+          "clientes_reales",
+          "lluvia_prevista_mm",
+          "temperatura_prevista_c"
+        ],
+        "formatos": [
+          "ciudad",
+          "fecha_corte_prediccion",
+          "fecha_servicio",
+          "temperatura_prevista_c"
+        ],
+        "clave_huerfana": [
+          "id_restaurante"
+        ],
+        "categorias": [
+          "temporada",
+          "tipo_restaurante"
+        ],
+        "duplicado": []
+      }
+    },
+    "reservas_lote_drift.csv": {
+      "fuente": "reservas",
+      "lote": "lote_drift",
+      "descripcion": "Una fila por reserva: antelación, grupo, canal, historial del cliente y resultado final",
+      "granularidad": "una reserva",
+      "clave_primaria": "id_registro",
+      "n_columnas": 13,
+      "columnas": [
+        "id_registro",
+        "id_restaurante",
+        "fecha_servicio",
+        "turno",
+        "hora_reserva",
+        "comensales",
+        "antelacion_dias",
+        "canal",
+        "id_cliente",
+        "reservas_previas_cliente",
+        "cancelaciones_previas_cliente",
+        "no_shows_previos_cliente",
+        "estado_final"
+      ],
+      "filas_originales": 56797,
+      "filas_csv": 57907,
+      "incorrectos": 800,
+      "tipos": 870,
+      "formatos": 945,
+      "outliers": 282,
+      "nulos": 1490,
+      "duplicado": 1110,
+      "categorias": 296,
+      "clave_huerfana": 267,
+      "bytes": 5466490,
+      "filas_con_error_de_campo": 4950,
+      "columnas_afectadas_por_error": {
+        "nulos": [
+          "antelacion_dias",
+          "canal",
+          "comensales",
+          "estado_final",
+          "hora_reserva",
+          "id_cliente",
+          "turno"
+        ],
+        "tipos": [
+          "antelacion_dias",
+          "cancelaciones_previas_cliente",
+          "comensales"
+        ],
+        "incorrectos": [
+          "antelacion_dias",
+          "comensales",
+          "estado_final",
+          "hora_reserva"
+        ],
+        "outliers": [
+          "antelacion_dias",
+          "comensales",
+          "reservas_previas_cliente"
+        ],
+        "formatos": [
+          "comensales",
+          "fecha_servicio",
+          "hora_reserva",
+          "turno"
+        ],
+        "clave_huerfana": [
+          "id_restaurante"
+        ],
+        "categorias": [
+          "canal",
+          "estado_final",
+          "turno"
+        ],
+        "duplicado": []
+      }
+    },
+    "rendimiento_platos_lote_drift.csv": {
+      "fuente": "rendimiento_platos",
+      "lote": "lote_drift",
+      "descripcion": "Ventas, coste y margen por restaurante, día y plato",
+      "granularidad": "restaurante + día + plato",
+      "clave_primaria": "id_registro",
+      "n_columnas": 14,
+      "columnas": [
+        "id_registro",
+        "id_restaurante",
+        "fecha_servicio",
+        "id_plato",
+        "nombre_plato",
+        "categoria",
+        "ofertado",
+        "precio_unitario_eur",
+        "coste_unitario_eur",
+        "unidades_vendidas",
+        "descuento_medio_pct",
+        "ventas_netas_eur",
+        "coste_total_eur",
+        "margen_contribucion_eur"
+      ],
+      "filas_originales": 86880,
+      "filas_csv": 88648,
+      "incorrectos": 1319,
+      "tipos": 1348,
+      "duplicado": 1768,
+      "formatos": 1304,
+      "nulos": 2149,
+      "outliers": 426,
+      "categorias": 403,
+      "clave_huerfana": 431,
+      "bytes": 10337973,
+      "filas_con_error_de_campo": 7380,
+      "columnas_afectadas_por_error": {
+        "nulos": [
+          "categoria",
+          "coste_unitario_eur",
+          "id_plato",
+          "nombre_plato",
+          "precio_unitario_eur",
+          "unidades_vendidas"
+        ],
+        "tipos": [
+          "coste_unitario_eur",
+          "ofertado",
+          "precio_unitario_eur",
+          "unidades_vendidas"
+        ],
+        "incorrectos": [
+          "coste_total_eur",
+          "coste_unitario_eur",
+          "descuento_medio_pct",
+          "precio_unitario_eur",
+          "unidades_vendidas"
+        ],
+        "outliers": [
+          "coste_unitario_eur",
+          "precio_unitario_eur",
+          "unidades_vendidas"
+        ],
+        "formatos": [
+          "coste_unitario_eur",
+          "fecha_servicio",
+          "nombre_plato",
+          "precio_unitario_eur"
+        ],
+        "clave_huerfana": [
+          "id_restaurante"
+        ],
+        "categorias": [
+          "categoria",
+          "nombre_plato"
+        ],
+        "duplicado": []
+      }
+    },
+    "resenas_lote_drift.csv": {
+      "fuente": "resenas",
+      "lote": "lote_drift",
+      "descripcion": "Reseñas de clientes (plataforma, puntuación y comentario en texto) asociadas a un plato",
+      "granularidad": "una reseña",
+      "clave_primaria": "id_registro",
+      "n_columnas": 8,
+      "columnas": [
+        "id_registro",
+        "id_restaurante",
+        "fecha_visita",
+        "fecha_resena",
+        "plataforma",
+        "id_plato",
+        "puntuacion",
+        "comentario"
+      ],
+      "filas_originales": 5343,
+      "filas_csv": 5437,
+      "outliers": 28,
+      "duplicado": 94,
+      "nulos": 145,
+      "formatos": 91,
+      "incorrectos": 73,
+      "tipos": 88,
+      "clave_huerfana": 27,
+      "categorias": 27,
+      "bytes": 929783,
+      "filas_con_error_de_campo": 479,
+      "columnas_afectadas_por_error": {
+        "nulos": [
+          "comentario",
+          "fecha_resena",
+          "id_plato",
+          "plataforma",
+          "puntuacion"
+        ],
+        "tipos": [
+          "puntuacion"
+        ],
+        "incorrectos": [
+          "puntuacion"
+        ],
+        "outliers": [
+          "puntuacion"
+        ],
+        "formatos": [
+          "comentario",
+          "fecha_resena",
+          "fecha_visita",
+          "plataforma"
+        ],
+        "clave_huerfana": [
+          "id_restaurante"
+        ],
+        "categorias": [
+          "plataforma"
+        ],
+        "duplicado": []
+      }
+    }
+  }
+}
