@@ -1,0 +1,5 @@
+# Parquet con pandas
+pyarrow
+# Acceso a HDFS desde pandas con rutas del tipo webhdfs://namenode:9870/...
+fsspec
+requests

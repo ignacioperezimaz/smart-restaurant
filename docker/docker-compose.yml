@@ -19,6 +19,7 @@ services:
     volumes:
       - namenode_data:/hadoop/dfs/name # metadatos de HDFS (persisten al borrar el contenedor)
       - ../data:/datos:ro              # nuestros CSV, visibles dentro como /datos (solo lectura)
+      - ../scripts:/scripts:ro         # scripts del repositorio, visibles dentro como /scripts
 
   # DATANODE: guarda físicamente los bloques de datos.
   datanode:
@@ -64,6 +65,24 @@ services:
       - ./hadoop.env
     depends_on:
       - resourcemanager
+
+  # JUPYTER: entorno de trabajo para el EDA y la limpieza (pandas, numpy...).
+  # Está en la misma red que HDFS, así que ve el namenode como "namenode".
+  jupyter:
+    build: ./jupyter                   # se construye con docker/jupyter/Dockerfile
+    container_name: jupyter
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8889:8888"          # http://localhost:8889 (8889 para no chocar con otro Jupyter en 8888)
+    environment:
+      - JUPYTER_TOKEN=smartrestaurant  # contraseña de acceso (solo uso local)
+      - HDFS_WEBHDFS_URL=http://namenode:9870   # dirección de HDFS por WebHDFS
+      - HDFS_USER=root                 # usuario con el que se escribe en HDFS
+    volumes:
+      - ../:/home/jovyan/work          # todo el repositorio, visible dentro como /home/jovyan/work
+    depends_on:
+      - namenode
+      - datanode
 
 # Volúmenes con nombre: Docker los guarda aparte, así los datos de HDFS
 # sobreviven a "docker compose down". Solo "down -v" los borra.
