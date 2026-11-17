@@ -6,12 +6,18 @@
 #   /scripts = carpeta scripts/ del repositorio
 # Uso (desde cualquier terminal, con el Docker en marcha):
 #   docker exec namenode bash /scripts/cargar_hdfs.sh
-# Es repetible: -f sobrescribe y mkdir -p no falla si ya existe.
+# Es repetible: ANTES de subir vacía la zona raw (así no quedan CSV antiguos
+# de una versión anterior de los datos). La zona /datalake/clean NO se toca.
 # ------------------------------------------------------------------
 set -euo pipefail
 
 echo "== 1. Creando zonas en HDFS =="
 hdfs dfs -mkdir -p /datalake/raw/historico /datalake/raw/lote_drift /datalake/clean
+
+echo "== 1b. Vaciando la zona raw (archivos antiguos) =="
+for lote in historico lote_drift; do
+  hdfs dfs -rm -r -f -skipTrash "/datalake/raw/${lote}/*" 2>&1 | grep -v "SASL" || true
+done
 
 echo "== 2. Subiendo los CSV =="
 for lote in historico lote_drift; do
