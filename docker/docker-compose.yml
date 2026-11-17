@@ -1,0 +1,72 @@
+# ============================================================
+# smart-restaurant · Clúster Hadoop (HDFS + YARN) de un solo nodo
+# Arranque:  docker compose up -d     (desde la carpeta docker/)
+# ============================================================
+services:
+
+  # NAMENODE: el "índice" de HDFS. Sabe en qué bloque está cada fichero.
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    restart: unless-stopped            # se reinicia solo si se cae
+    ports:
+      - "9870:9870"                    # interfaz web de HDFS -> http://localhost:9870
+      - "9000:9000"                    # puerto por el que los clientes hablan con HDFS
+    environment:
+      - CLUSTER_NAME=smart-restaurant  # nombre del clúster (obligatorio en esta imagen)
+    env_file:
+      - ./hadoop.env                   # configuración común de Hadoop
+    volumes:
+      - namenode_data:/hadoop/dfs/name # metadatos de HDFS (persisten al borrar el contenedor)
+      - ../data:/datos:ro              # nuestros CSV, visibles dentro como /datos (solo lectura)
+
+  # DATANODE: guarda físicamente los bloques de datos.
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    restart: unless-stopped
+    ports:
+      - "9864:9864"                    # interfaz web del datanode
+    environment:
+      - SERVICE_PRECONDITION=namenode:9870   # espera a que el namenode esté listo
+    env_file:
+      - ./hadoop.env
+    volumes:
+      - datanode_data:/hadoop/dfs/data # bloques de datos (persisten)
+    depends_on:
+      - namenode
+
+  # RESOURCEMANAGER (YARN): reparte el trabajo de cómputo.
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+    container_name: resourcemanager
+    restart: unless-stopped
+    ports:
+      - "8088:8088"                    # interfaz web de YARN -> http://localhost:8088
+    environment:
+      - SERVICE_PRECONDITION=namenode:9000 namenode:9870 datanode:9864
+    env_file:
+      - ./hadoop.env
+    depends_on:
+      - namenode
+      - datanode
+
+  # NODEMANAGER (YARN): ejecuta las tareas que asigna el resourcemanager.
+  nodemanager:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: nodemanager
+    restart: unless-stopped
+    ports:
+      - "8042:8042"                    # interfaz web del nodemanager
+    environment:
+      - SERVICE_PRECONDITION=namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088
+    env_file:
+      - ./hadoop.env
+    depends_on:
+      - resourcemanager
+
+# Volúmenes con nombre: Docker los guarda aparte, así los datos de HDFS
+# sobreviven a "docker compose down". Solo "down -v" los borra.
+volumes:
+  namenode_data:
+  datanode_data:
