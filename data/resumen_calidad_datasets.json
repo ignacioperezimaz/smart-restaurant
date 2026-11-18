@@ -1,0 +1,152 @@
+{
+  "titulo": "Auditoría resumida de calidad de los datasets sintéticos de restauración",
+  "fecha_generacion": "2026-11-18",
+  "alcance": "Resumen por archivo y tipo de anomalía; no incluye filas individuales.",
+  "reglas": {
+    "fechas": "Se espera YYYY-MM-DD; otros formatos se marcan como no estándar. Fechas imposibles se marcan inválidas.",
+    "validaciones_numericas": {
+      "id_plato": "entero positivo",
+      "precio_unidad": "número no negativo",
+      "coste_unidad": "número no negativo",
+      "unidades_vendidas": "entero no negativo",
+      "clientes_dia": "entero no negativo",
+      "dia_semana": "entero 1–7",
+      "n_platos": "entero positivo",
+      "complejidad_pedido": "entero 1–10",
+      "pedido_pendiente": "entero no negativo",
+      "cocineros_disponibles": "entero positivo",
+      "tiempo_prep_min": "número positivo",
+      "complejidad": "entero 1–10"
+    },
+    "duplicados": "Filas repetidas exactamente en todas las columnas."
+  },
+  "datasets": [
+    {
+      "archivo": "01_ventas_diarias_platos.csv",
+      "filas": 110500,
+      "problemas": [
+        {
+          "tipo": "Duplicados exactos",
+          "filas_adicionales": 500,
+          "grupos": 500
+        },
+        {
+          "tipo": "Campos vacíos",
+          "por_campo": {
+            "clientes_dia": 761,
+            "coste_unidad": 739,
+            "fecha": 765,
+            "unidades_vendidas": 790,
+            "id_plato": 738,
+            "precio_unidad": 709
+          }
+        },
+        {
+          "tipo": "Valores numéricos no convertibles o fuera de rango esperado",
+          "por_campo": {
+            "unidades_vendidas": 1361,
+            "id_plato": 1396,
+            "precio_unidad": 1360
+          }
+        },
+        {
+          "tipo": "Fechas",
+          "formato_no_estandar": 1940,
+          "imposibles": 0,
+          "vacias": 765
+        }
+      ]
+    },
+    {
+      "archivo": "02_pedidos_tiempos_preparacion.csv",
+      "filas": 115600,
+      "problemas": [
+        {
+          "tipo": "Duplicados exactos",
+          "filas_adicionales": 600,
+          "grupos": 600
+        },
+        {
+          "tipo": "Campos vacíos",
+          "por_campo": {
+            "dia_semana": 473,
+            "hora": 474,
+            "fecha": 525,
+            "cocineros_disponibles": 495,
+            "tiempo_prep_min": 461,
+            "n_platos": 507,
+            "complejidad_pedido": 468,
+            "pedido_pendiente": 514
+          }
+        },
+        {
+          "tipo": "Valores numéricos no convertibles o fuera de rango esperado",
+          "por_campo": {
+            "dia_semana": 1136,
+            "complejidad_pedido": 1179,
+            "tiempo_prep_min": 945
+          }
+        },
+        {
+          "tipo": "Fechas",
+          "formato_no_estandar": 1743,
+          "imposibles": 0,
+          "vacias": 525
+        },
+        {
+          "tipo": "Hora fuera de formato HH:mm:ss",
+          "cantidad": 0
+        },
+        {
+          "tipo": "id_pedido con formato no válido",
+          "cantidad": 0
+        },
+        {
+          "tipo": "IDs de pedido repetidos",
+          "cantidad": 600
+        }
+      ]
+    },
+    {
+      "archivo": "03_carta_platos.csv",
+      "filas": 80500,
+      "problemas": [
+        {
+          "tipo": "Duplicados exactos",
+          "filas_adicionales": 823,
+          "grupos": 815
+        },
+        {
+          "tipo": "Campos vacíos",
+          "por_campo": {
+            "id_plato": 1059,
+            "nombre": 1083,
+            "complejidad": 1074
+          }
+        },
+        {
+          "tipo": "Valores numéricos no convertibles o fuera de rango esperado",
+          "por_campo": {
+            "complejidad": 1199,
+            "id_plato": 904
+          }
+        },
+        {
+          "tipo": "Fechas",
+          "formato_no_estandar": 0,
+          "imposibles": 0,
+          "vacias": 0
+        },
+        {
+          "tipo": "id_plato repetidos en la carta",
+          "cantidad_ids": 354,
+          "nota": "Puede representar snapshots/versiones; revisar si se consolida."
+        }
+      ]
+    }
+  ],
+  "observaciones": [
+    "Fechas con formato alternativo pueden ser válidas, pero requieren normalización.",
+    "Los conteos describen incidencias, no enumeran las filas afectadas."
+  ]
+}
