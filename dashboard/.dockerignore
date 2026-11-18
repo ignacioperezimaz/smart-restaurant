@@ -1,4 +1,0 @@
-# El entorno virtual de Windows pesa mucho y no sirve dentro de Linux
-.venv
-__pycache__
-*.pyc

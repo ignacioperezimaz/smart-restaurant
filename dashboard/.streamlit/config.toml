@@ -1,7 +1,0 @@
-# Tema base de Streamlit con la paleta Smart Restaurant
-[theme]
-primaryColor = "#F28C38"             # naranja: acentos y elementos activos
-backgroundColor = "#EAF2F4"          # azul claro: fondo general
-secondaryBackgroundColor = "#FFFFFF" # blanco: tarjetas y widgets
-textColor = "#162930"                # gris oscuro: texto largo
-font = "sans serif"                  # Montserrat se carga por CSS en app.py
