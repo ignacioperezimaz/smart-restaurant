@@ -4,22 +4,28 @@ generar_variables_clustering.py
 Añade a los CSV las variables de entrada del OBJETIVO 1 (clustering de platos
 por rendimiento) sin tocar ninguna columna ni fila original:
 
-  01_ventas_diarias_platos.csv  ->  + margen_unitario, + popularidad   (CALCULADAS)
-  03_carta_platos.csv           ->  + categoria, + dificultad_elaboracion,
-                                    + valoracion                       (INVENTADAS)
+  01_ventas_diarias_platos.csv  ->  + categoria, valoracion, dificultad_elaboracion
+                                      (INVENTADAS, heredadas del plato: ver abajo)
+                                    + popularidad, margen_unitario  (CALCULADAS)
+  03_carta_platos.csv           ->  + categoria, dificultad_elaboracion,
+                                      valoracion                    (INVENTADAS)
   02_pedidos_tiempos_preparacion.csv no se modifica (es del objetivo 2, regresión).
 
-Definiciones (cada fórmula, por fila):
+Coherencia entre 01 y 03:
+  Los atributos del plato (categoria, dificultad_elaboracion, valoracion) salen
+  de UNA SOLA tabla por id_plato (misma semilla), que usan los dos archivos.
+  Por tanto, un mismo id_plato tiene exactamente los mismos valores en ventas
+  y en la carta. Al ser estables por id, al consolidar la carta por id_plato
+  antes de unirla con las ventas no se multiplican las filas.
+
+Definiciones de las variables calculadas (por fila de ventas):
   margen_unitario = precio_unidad - coste_unidad            [EUR por unidad]
       (NO es margen porcentual ni beneficio total; esos se calculan al agregar).
   popularidad     = unidades_vendidas / clientes_dia        [unidades por cliente]
-      (mide qué parte de la clientela del día pide ese plato; en la limpieza
-       se agrega por plato y periodo, p. ej. la media).
+      (qué parte de la clientela del día pide ese plato; en la limpieza se agrega
+       por plato y periodo, p. ej. la media).
 
 Variables inventadas (datos SINTÉTICOS, semilla fija -> reproducibles):
-  Se generan UNA VEZ POR id_plato (valor estable): así, al consolidar la carta
-  por identificador antes de unirla con las ventas, cada plato conserva su
-  valor y no se multiplican las filas de ventas.
     categoria              entrante | principal | postre | bebida
     dificultad_elaboracion entero 1-10 (depende de la categoría + ruido)
     valoracion             1.0-5.0 (media 4; sube un poco con la dificultad)
@@ -29,7 +35,8 @@ Reglas sobre datos sucios (se respeta el RAW tal cual):
   - Si un valor falta o no es numérico ('muchos', vacío) el campo calculado
     queda VACÍO (no se imputa; la imputación se decide en la limpieza).
   - clientes_dia = 0 -> popularidad vacía (división por cero).
-  - id_plato con prefijo ('PL-147') se interpreta como 147; id vacío -> vacío.
+  - id_plato con prefijo ('PL-147') se interpreta como 147; id vacío -> las
+    variables del plato quedan vacías.
 
 Uso (desde la raíz del repo):
   python data/generar_variables_clustering.py
@@ -51,7 +58,9 @@ MAX_ID_CATALOGO = 500       # ids 1..500; se genera siempre la misma tabla
 ARCHIVO_VENTAS = "01_ventas_diarias_platos.csv"
 ARCHIVO_CARTA = "03_carta_platos.csv"
 
-COLS_VENTAS = ["margen_unitario", "popularidad"]
+# Columnas que se añaden, en el orden en que quedan al final de cada CSV
+COLS_VENTAS = ["categoria", "valoracion", "dificultad_elaboracion",
+               "popularidad", "margen_unitario"]
 COLS_CARTA = ["categoria", "dificultad_elaboracion", "valoracion"]
 
 # Categorías, su peso en la carta y su dificultad media de elaboración (1-10)
@@ -96,25 +105,7 @@ def formatear(serie: pd.Series, decimales: int) -> pd.Series:
 
 
 # ----------------------------------------------------------------------------
-# Ventas: variables calculadas
-# ----------------------------------------------------------------------------
-def ampliar_ventas(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.drop(columns=[c for c in COLS_VENTAS if c in df.columns])
-    precio = a_numero(df["precio_unidad"])
-    coste = a_numero(df["coste_unidad"])
-    unidades = a_numero(df["unidades_vendidas"])
-    clientes = a_numero(df["clientes_dia"])
-
-    margen = (precio - coste).round(2)                    # EUR por unidad
-    popularidad = unidades / clientes.where(clientes > 0)  # unidades por cliente
-
-    df["margen_unitario"] = formatear(margen, 2)
-    df["popularidad"] = formatear(popularidad, 4)
-    return df
-
-
-# ----------------------------------------------------------------------------
-# Carta: variables inventadas, estables por id_plato
+# Atributos del plato: UNA tabla por id_plato, compartida por ventas y carta
 # ----------------------------------------------------------------------------
 def tabla_atributos() -> pd.DataFrame:
     rng = np.random.default_rng(SEMILLA)
@@ -130,14 +121,47 @@ def tabla_atributos() -> pd.DataFrame:
                         index=pd.RangeIndex(1, n + 1, name="id"))
 
 
+def atributos_plato(id_plato: pd.Series) -> dict:
+    """Devuelve las 3 columnas del plato (como texto) alineadas con cada fila."""
+    ids = id_a_entero(id_plato)
+    tabla = tabla_atributos()
+    return {
+        "categoria": ids.map(tabla["categoria"]).fillna(""),
+        "dificultad_elaboracion": formatear(ids.map(tabla["dificultad_elaboracion"]), 0),
+        "valoracion": formatear(ids.map(tabla["valoracion"]), 1),
+    }
+
+
+# ----------------------------------------------------------------------------
+# Ventas: atributos del plato + variables calculadas
+# ----------------------------------------------------------------------------
+def ampliar_ventas(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.drop(columns=[c for c in COLS_VENTAS if c in df.columns])
+    precio = a_numero(df["precio_unidad"])
+    coste = a_numero(df["coste_unidad"])
+    unidades = a_numero(df["unidades_vendidas"])
+    clientes = a_numero(df["clientes_dia"])
+
+    atributos = atributos_plato(df["id_plato"])          # misma fuente que la carta
+    margen = (precio - coste).round(2)                    # EUR por unidad
+    popularidad = unidades / clientes.where(clientes > 0)  # unidades por cliente
+
+    df["categoria"] = atributos["categoria"]
+    df["valoracion"] = atributos["valoracion"]
+    df["dificultad_elaboracion"] = atributos["dificultad_elaboracion"]
+    df["popularidad"] = formatear(popularidad, 4)
+    df["margen_unitario"] = formatear(margen, 2)
+    return df
+
+
+# ----------------------------------------------------------------------------
+# Carta: atributos del plato (estables por id_plato)
+# ----------------------------------------------------------------------------
 def ampliar_carta(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop(columns=[c for c in COLS_CARTA if c in df.columns])
-    ids = id_a_entero(df["id_plato"])
-    atributos = tabla_atributos()
-
-    df["categoria"] = ids.map(atributos["categoria"]).fillna("")
-    df["dificultad_elaboracion"] = formatear(ids.map(atributos["dificultad_elaboracion"]), 0)
-    df["valoracion"] = formatear(ids.map(atributos["valoracion"]), 1)
+    atributos = atributos_plato(df["id_plato"])
+    for columna in COLS_CARTA:
+        df[columna] = atributos[columna]
     return df
 
 
