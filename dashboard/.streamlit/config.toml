@@ -1,0 +1,12 @@
+# Tema Smart Restaurant (colores de la guía de marca)
+[theme]
+primaryColor = "#F28C38"              # naranja: acentos, pestaña activa, radio, sliders
+backgroundColor = "#EAF2F4"           # azul claro: fondo general
+secondaryBackgroundColor = "#FFFFFF"  # blanco: paneles y tarjetas
+textColor = "#162930"                 # texto extenso
+
+[client]
+toolbarMode = "minimal"               # oculta el botón Deploy
+
+[browser]
+gatherUsageStats = false

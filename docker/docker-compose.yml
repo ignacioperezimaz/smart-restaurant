@@ -84,6 +84,23 @@ services:
       - namenode
       - datanode
 
+  # DASHBOARD: la aplicación Streamlit. Lee los datos de HDFS (red de Docker)
+  # y, si no puede, de los CSV de data/. Se abre en http://localhost:8501
+  dashboard:
+    build: ../dashboard                # se construye con dashboard/Dockerfile
+    container_name: dashboard
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8501:8501"          # http://localhost:8501
+    environment:
+      - HDFS_HOST=namenode             # dentro de Docker, HDFS se llama "namenode"
+      - HDFS_USER=root
+    volumes:
+      - ../:/app                       # todo el repositorio: /app/dashboard (código) y /app/data (CSV)
+    depends_on:
+      - namenode
+      - datanode
+
 # Volúmenes con nombre: Docker los guarda aparte, así los datos de HDFS
 # sobreviven a "docker compose down". Solo "down -v" los borra.
 volumes:

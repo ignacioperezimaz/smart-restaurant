@@ -45,7 +45,7 @@ _CSS = f"""
 .stApp, .stApp p, .stApp li, .stApp label, .stApp button, .stApp input,
 .stApp h1, .stApp h2, .stApp h3, .stApp h4,
 [data-testid="stMetricLabel"], [data-testid="stMetricValue"],
-[data-testid="stCaptionContainer"], [data-testid="stSidebar"] * {{
+[data-testid="stCaptionContainer"], [data-testid="stWidgetLabel"] p {{
   font-family: var(--font-main) !important;
 }}
 
@@ -63,6 +63,47 @@ _CSS = f"""
 }}
 [data-testid="stMetricLabel"] {{ color: var(--azul-petroleo) !important; font-weight: 600 !important; }}
 [data-testid="stMetricValue"] {{ color: var(--azul-petroleo) !important; font-weight: 700 !important; }}
+
+/* Cifras de las tarjetas: más pequeñas y sin cortar con "..." */
+[data-testid="stMetricValue"], [data-testid="stMetricValue"] * {{
+  font-size: 1.75rem !important; line-height: 1.25 !important;
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+}}
+
+/* Fondo general azul claro y barra lateral blanca */
+.stApp {{ background: var(--azul-claro); }}
+[data-testid="stSidebar"] {{ background: var(--blanco); border-right: 1px solid rgba(31, 58, 68, 0.15); }}
+[data-testid="stHeader"] {{ background: transparent; }}
+
+/* Cabecera: tarjeta blanca con acento naranja */
+[data-testid="stVerticalBlockBorderWrapper"] {{
+  background: var(--blanco); border: none !important; border-left: 8px solid var(--naranja) !important;
+  border-radius: 12px; box-shadow: 0 1px 4px rgba(31, 58, 68, 0.15);
+}}
+
+/* Pestañas */
+button[data-baseweb="tab"] p {{ font-weight: 600 !important; font-size: 1rem !important; color: var(--azul-petroleo) !important; }}
+button[data-baseweb="tab"][aria-selected="true"] p {{ color: var(--naranja) !important; }}
+
+/* Iconos de Streamlit: siempre con su fuente de iconos, nunca con Montserrat */
+[data-testid="stIconMaterial"], span[class*="material"] {{
+  font-family: "Material Symbols Rounded", "Material Symbols Outlined" !important;
+}}
+
+/* Menú lateral: opción activa en melocotón con borde naranja */
+[data-testid="stSidebarNavLink"] {{ border-radius: 8px; margin-bottom: 4px; }}
+[data-testid="stSidebarNavLink"] span {{ font-weight: 600; color: var(--azul-petroleo); }}
+[data-testid="stSidebarNavLink"][aria-current="page"] {{
+  background: var(--melocoton); border-left: 5px solid var(--naranja);
+}}
+[data-testid="stSidebarNavLink"][aria-current="page"] span {{ font-weight: 700; }}
+
+/* Bloque de código (árbol de HDFS): fondo azul petróleo, texto claro y detalles en naranja */
+[data-testid="stCode"] pre, [data-testid="stCode"] code {{
+  background: var(--azul-petroleo) !important; color: var(--azul-claro) !important;
+  font-size: 1rem !important; line-height: 1.5 !important;
+}}
+[data-testid="stCode"] {{ border-radius: 12px; border-left: 8px solid var(--naranja); }}
 </style>
 """
 

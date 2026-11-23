@@ -25,6 +25,8 @@ Reglas sobre datos sucios (el resto de columnas del RAW no se toca):
   - Plato de la carta sin id o sin dificultad -> no se usa como candidato.
   - id con prefijo ('PL-147') se interpreta como 147.
 
+Las filas duplicadas (mismo id_pedido) reciben el mismo valor.
+
 Reproducible (semilla fija) e idempotente (siempre se recalcula la columna).
 
 Uso (desde la raíz del repo):
@@ -63,20 +65,24 @@ def dificultad_por_plato(carta: pd.DataFrame) -> np.ndarray:
 
 
 def rellenar_complejidad(pedidos: pd.DataFrame, dificultades: np.ndarray) -> pd.DataFrame:
+    """El sorteo se hace por id_pedido: las filas duplicadas (mismo id) reciben
+    exactamente el mismo valor, igual que eran copias exactas en el RAW."""
     rng = np.random.default_rng(SEMILLA)
-    n = pd.to_numeric(pedidos["n_platos"], errors="coerce")
+    unicos = pedidos.drop_duplicates("id_pedido").reset_index(drop=True)
+    n = pd.to_numeric(unicos["n_platos"], errors="coerce")
     valido = n.between(1, MAX_PLATOS)
     n_int = n.where(valido, 0).astype(int).to_numpy()
 
     # Para cada pedido, MAX_PLATOS platos al azar; solo cuentan los n_platos primeros
-    elegidos = dificultades[rng.integers(0, len(dificultades), size=(len(pedidos), MAX_PLATOS))]
+    elegidos = dificultades[rng.integers(0, len(dificultades), size=(len(unicos), MAX_PLATOS))]
     cuenta = np.arange(MAX_PLATOS)[None, :] < n_int[:, None]
     suma = (elegidos * cuenta).sum(axis=1)
     media = np.where(n_int > 0, suma / np.maximum(n_int, 1), np.nan)
+    texto = pd.Series(media).map(lambda x: "" if pd.isna(x) else f"{x:.2f}")
 
     pedidos = pedidos.copy()
-    pedidos["complejidad_pedido"] = pd.Series(media).map(
-        lambda x: "" if pd.isna(x) else f"{x:.2f}").to_numpy()
+    pedidos["complejidad_pedido"] = pedidos["id_pedido"].map(
+        dict(zip(unicos["id_pedido"], texto))).to_numpy()
     return pedidos
 
 
