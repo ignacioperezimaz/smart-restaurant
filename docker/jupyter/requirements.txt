@@ -3,3 +3,5 @@ pyarrow
 # Acceso a HDFS desde pandas con rutas del tipo webhdfs://namenode:9870/...
 fsspec
 requests
+# Cliente ligero de MLflow (misma versión que el servidor)
+mlflow-skinny==2.22.5

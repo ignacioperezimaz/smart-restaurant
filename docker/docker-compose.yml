@@ -78,11 +78,29 @@ services:
       - JUPYTER_TOKEN=smartrestaurant  # contraseña de acceso (solo uso local)
       - HDFS_WEBHDFS_URL=http://namenode:9870   # dirección de HDFS por WebHDFS
       - HDFS_USER=root                 # usuario con el que se escribe en HDFS
+      - MLFLOW_TRACKING_URI=http://mlflow:5000  # servidor MLflow (dentro de Docker se llama "mlflow")
     volumes:
       - ../:/home/jovyan/work          # todo el repositorio, visible dentro como /home/jovyan/work
     depends_on:
       - namenode
       - datanode
+      - mlflow
+
+  # MLFLOW: registra los experimentos (parámetros, métricas, gráficos) y guarda
+  # los modelos entrenados. Interfaz web -> http://localhost:5000
+  mlflow:
+    build: ./mlflow                    # se construye con docker/mlflow/Dockerfile
+    container_name: mlflow
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"          # http://localhost:5000
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts
+    volumes:
+      - mlflow_data:/mlflow            # base de datos y modelos (persisten al borrar el contenedor)
 
   # DASHBOARD: la aplicación Streamlit. Lee los datos de HDFS (red de Docker)
   # y, si no puede, de los CSV de data/. Se abre en http://localhost:8501
@@ -106,3 +124,4 @@ services:
 volumes:
   namenode_data:
   datanode_data:
+  mlflow_data:
