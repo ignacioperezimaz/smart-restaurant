@@ -19,7 +19,7 @@ Qué cambia respecto al CSV anterior
    - horas punta: comida (13:00-15:00) y cena (20:30-22:30), con un valle por
      la tarde; el fin de semana los picos son más altos y duran más.
 3. La carga de cocina sale de esa demanda: en hora punta hay más pedidos
-   pendientes (`pedido_pendiente`) y se refuerza el personal solo en parte
+   pendientes (`cola_pedidos`) y se refuerza el personal solo en parte
    (`cocineros_disponibles`), así que la cocina se satura y el tiempo sube.
 4. Columnas nuevas que pueden influir en el tiempo de preparación (se conocen
    antes de cocinar, no hay fuga de información): es_fin_de_semana,
@@ -89,7 +89,7 @@ INTERCEPTO_TIEMPO = 4.9
 
 COLUMNAS_ORIGINALES = [
     "id_pedido", "fecha", "hora", "dia_semana", "n_platos", "complejidad_pedido",
-    "pedido_pendiente", "cocineros_disponibles", "tiempo_prep_min", "canal",
+    "cola_pedidos", "cocineros_disponibles", "tiempo_prep_minutos", "canal",
     "prioridad_aux", "id_local", "estado_captura",
 ]
 COLUMNAS_NUEVAS = [
@@ -243,8 +243,8 @@ def generar_pedidos(cal: pd.DataFrame, dificultades: np.ndarray,
     return pd.DataFrame({
         "fecha": c["fecha"], "hora": [f"{h:02d}:{m:02d}:00" for h, m in zip(hora, minuto)],
         "dia_semana": c["dia_semana"], "n_platos": n_platos, "complejidad_pedido": complejidad,
-        "pedido_pendiente": pendiente, "cocineros_disponibles": cocineros,
-        "tiempo_prep_min": tiempo, "canal": canal, "prioridad_aux": prioridad,
+        "cola_pedidos": pendiente, "cocineros_disponibles": cocineros,
+        "tiempo_prep_minutos": tiempo, "canal": canal, "prioridad_aux": prioridad,
         "id_local": local_idx + 1, "estado_captura": "registrado",
         "es_fin_de_semana": c["es_fin_de_semana"], "es_festivo": c["es_festivo"],
         "franja": franja, "es_hora_punta": es_punta.astype(int), "mes": c["mes"],
@@ -269,9 +269,9 @@ def ensuciar(real: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
     df["dia_semana"] = real["dia_semana"].astype(str)
     df["n_platos"] = real["n_platos"].astype(str)
     df["complejidad_pedido"] = real["complejidad_pedido"].map("{:.2f}".format)
-    df["pedido_pendiente"] = real["pedido_pendiente"].astype(str)
+    df["cola_pedidos"] = real["cola_pedidos"].astype(str)
     df["cocineros_disponibles"] = real["cocineros_disponibles"].astype(str)
-    df["tiempo_prep_min"] = real["tiempo_prep_min"].map("{:.1f}".format)
+    df["tiempo_prep_minutos"] = real["tiempo_prep_minutos"].map("{:.1f}".format)
     for col in ("canal", "prioridad_aux", "estado_captura"):
         df[col] = real[col]
     df["id_local"] = real["id_local"].astype(str)
@@ -283,14 +283,14 @@ def ensuciar(real: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
     m = azar(0.0151)                                    # fecha MM-DD-AAAA
     df.loc[m, "fecha"] = real.loc[m, "fecha"].dt.strftime("%m-%d-%Y")
     m = azar(0.0082)                                    # tiempo en HH:MM ('00:25')
-    t = real.loc[m, "tiempo_prep_min"].astype(int)
-    df.loc[m, "tiempo_prep_min"] = [f"{x // 60:02d}:{x % 60:02d}" for x in t]
+    t = real.loc[m, "tiempo_prep_minutos"].astype(int)
+    df.loc[m, "tiempo_prep_minutos"] = [f"{x // 60:02d}:{x % 60:02d}" for x in t]
     m = azar(0.0098)                                    # día de la semana inválido
     df.loc[m, "dia_semana"] = rng.choice(["0", "8", "lunes"], size=m.sum(), p=[0.37, 0.34, 0.29])
 
     # Vacíos (~0,43 % por columna)
-    for col in ("fecha", "hora", "dia_semana", "n_platos", "pedido_pendiente",
-                "cocineros_disponibles", "tiempo_prep_min"):
+    for col in ("fecha", "hora", "dia_semana", "n_platos", "cola_pedidos",
+                "cocineros_disponibles", "tiempo_prep_minutos"):
         df.loc[azar(0.0043), col] = ""
     # La complejidad se calcula a partir de n_platos: si falta, no se puede calcular
     df.loc[df["n_platos"] == "", "complejidad_pedido"] = ""
@@ -302,7 +302,9 @@ def ensuciar(real: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
 
     # Columnas nuevas (limpias: se calculan de los valores reales)
     nuevas = real[COLUMNAS_NUEVAS].iloc[np.repeat(np.arange(n), repeticiones)]
-    return pd.concat([df[COLUMNAS_ORIGINALES], nuevas], axis=1)
+    resultado = pd.concat([df[COLUMNAS_ORIGINALES], nuevas], axis=1)
+    # La variable de salida (lo que queremos predecir) va siempre la última
+    return resultado[[c for c in resultado.columns if c != "tiempo_prep_minutos"] + ["tiempo_prep_minutos"]]
 
 
 # ----------------------------------------------------------------------------
@@ -331,18 +333,18 @@ def informe(real: pd.DataFrame, raw: pd.DataFrame) -> None:
     print((real["franja"].value_counts(normalize=True) * 100).round(1).to_string())
     print(f"Hora punta: {real['es_hora_punta'].mean() * 100:.1f} % de los pedidos")
 
-    t = real["tiempo_prep_min"]
+    t = real["tiempo_prep_minutos"]
     print(f"\nTiempo de preparación: media {t.mean():.1f} | desv. {t.std():.1f} | "
           f"min {t.min():.1f} | max {t.max():.1f}")
     print("Tiempo medio según hora punta / fin de semana:")
-    print(real.groupby(["es_hora_punta", "es_fin_de_semana"])["tiempo_prep_min"]
+    print(real.groupby(["es_hora_punta", "es_fin_de_semana"])["tiempo_prep_minutos"]
           .mean().round(1).unstack().to_string())
     print("Pedidos pendientes medios según hora punta / fin de semana:")
-    print(real.groupby(["es_hora_punta", "es_fin_de_semana"])["pedido_pendiente"]
+    print(real.groupby(["es_hora_punta", "es_fin_de_semana"])["cola_pedidos"]
           .mean().round(1).unstack().to_string())
 
     # Regresión lineal rápida con las variables de entrada (solo como señal)
-    X = real[["n_platos", "complejidad_pedido", "pedido_pendiente", "cocineros_disponibles",
+    X = real[["n_platos", "complejidad_pedido", "cola_pedidos", "cocineros_disponibles",
               "num_platos_complejos", "es_hora_punta", "es_fin_de_semana", "es_festivo",
               "ingrediente_agotado", "ocupacion_local"]].astype(float).copy()
     X["delivery"] = (real["canal"] == "delivery").astype(float)
@@ -355,10 +357,10 @@ def informe(real: pd.DataFrame, raw: pd.DataFrame) -> None:
     print("\nEnsuciado (filas con problema):")
     print("  vacíos por columna:", {c: int((raw[c] == "").sum()) for c in
           ("fecha", "hora", "dia_semana", "n_platos", "complejidad_pedido",
-           "pedido_pendiente", "cocineros_disponibles", "tiempo_prep_min")})
+           "cola_pedidos", "cocineros_disponibles", "tiempo_prep_minutos")})
     print("  dia_semana inválido:", int(raw["dia_semana"].isin(["0", "8", "lunes"]).sum()),
           "| fecha MM-DD-AAAA:", int(raw["fecha"].str.match(r"^\d{2}-\d{2}-\d{4}$").sum()),
-          "| tiempo HH:MM:", int(raw["tiempo_prep_min"].str.contains(":").sum()),
+          "| tiempo HH:MM:", int(raw["tiempo_prep_minutos"].str.contains(":").sum()),
           "| id repetidos:", int(raw["id_pedido"].duplicated().sum()))
 
 

@@ -25,6 +25,19 @@ def miles(n: int) -> str:
     return f"{n:,}".replace(",", ".")
 
 
+# La variable de salida se resalta con el melocotón de la marca (el mismo de estilo.py)
+
+
+def resaltar(tabla: pd.DataFrame, columna):
+    """Devuelve la tabla con `columna` en melocotón. Si no hay columna que resaltar (o aún no existe), la tabla tal cual."""
+    if not columna or columna not in tabla.columns:
+        return tabla
+    return tabla.style.set_properties(
+        subset=[columna],
+        **{"background-color": estilo.MELOCOTON, "color": estilo.GRIS_TEXTO, "font-weight": "bold"},
+    )
+
+
 # ---------------------------------------------------------------- problemas por dataset
 def problemas_pedidos(df, vc):
     dia = pd.to_numeric(df["dia_semana"].str.strip(), errors="coerce")
@@ -34,7 +47,7 @@ def problemas_pedidos(df, vc):
         "dia_semana inválido (no es 1-7)": ~dia.between(1, 7) & ~vc["dia_semana"],
         "fecha en formato MM-DD-AAAA": df["fecha"].str.strip().str.fullmatch(r"\d{2}-\d{2}-\d{4}"),
         "hora en formato HH:MM (sin segundos)": df["hora"].str.strip().str.fullmatch(r"\d{1,2}:\d{2}"),
-        "tiempo_prep_min escrito como HH:MM": df["tiempo_prep_min"].str.strip().str.fullmatch(r"\d{1,2}:\d{2}"),
+        "tiempo_prep_minutos escrito como HH:MM": df["tiempo_prep_minutos"].str.strip().str.fullmatch(r"\d{1,2}:\d{2}"),
     }
 
 
@@ -50,7 +63,9 @@ def problemas_ventas(df, vc):
 
 
 DATASETS = {
-    "Pedidos y tiempos de preparación": dict(clave="pedidos", problemas=problemas_pedidos, objetivo="tiempo_prep_min"),
+    # salida: variable de salida (lo que queremos predecir). Se resalta en melocotón en las tablas RAW y CLEAN.
+    "Pedidos y tiempos de preparación": dict(clave="pedidos", problemas=problemas_pedidos, objetivo="tiempo_prep_minutos",
+                                             salida="tiempo_prep_minutos"),
     "Ventas diarias de platos": dict(clave="ventas", problemas=problemas_ventas, objetivo="unidades_vendidas"),
 }
 
@@ -155,7 +170,9 @@ def pagina_dataset(nombre_ds: str) -> None:
         filas = raw if vista == "Primeras filas" else raw[masks[vista].fillna(False)]
         st.caption(f"{miles(len(filas))} filas cumplen el filtro; se muestran {min(n, len(filas))}. "
                    "Todo se ve como texto, tal cual está en el CSV.")
-        st.dataframe(filas.head(n), width="stretch")
+        st.dataframe(resaltar(filas.head(n), cfg.get("salida")), width="stretch")
+        if cfg.get("salida") in filas.columns:
+            st.caption(f"En melocotón: {cfg['salida']}, la variable de salida (lo que queremos predecir).")
 
         st.subheader("Vacíos por columna")
         fig = px.bar(vacios.reset_index().rename(columns={"index": "Columna", 0: "Vacíos"}),
@@ -177,7 +194,9 @@ def pagina_dataset(nombre_ds: str) -> None:
             c3.metric("Celdas vacías", miles(int(clean.isna().sum().sum())))
 
             n2 = st.slider("Número de filas a mostrar", 10, 500, 50, step=10, key="n_clean")
-            st.dataframe(clean.head(n2), width="stretch")
+            st.dataframe(resaltar(clean.head(n2), cfg.get("salida")), width="stretch")
+            if cfg.get("salida") in clean.columns:
+                st.caption(f"En melocotón: {cfg['salida']}, la variable de salida (lo que queremos predecir).")
 
             st.subheader("Tipos de dato")
             tipos = pd.DataFrame({"Columna": clean.columns, "Tipo": clean.dtypes.astype(str).values})
