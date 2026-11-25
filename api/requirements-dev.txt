@@ -1,0 +1,3 @@
+# Para ejecutar los tests (pytest)
+-r requirements.txt
+pytest>=8

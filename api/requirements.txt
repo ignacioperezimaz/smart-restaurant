@@ -1,0 +1,7 @@
+# La API usa el MISMO entorno que el Jupyter del proyecto (ver Dockerfile): pandas, numpy y scikit-learn ya vienen
+# en esa imagen con las mismas versiones con las que se entrenaron los modelos. Aquí solo se añade lo propio de la API.
+fastapi>=0.115
+uvicorn>=0.30
+pydantic>=2.7
+# Cliente ligero de MLflow (misma versión que el servidor)
+mlflow-skinny==2.22.5

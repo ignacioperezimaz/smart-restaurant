@@ -119,6 +119,25 @@ services:
       - namenode
       - datanode
 
+  # API: FastAPI que sirve los dos modelos (clustering de platos y tiempo de preparación) leyéndolos de MLflow.
+  # Documentación interactiva -> http://localhost:8000/docs   (más detalles en api/README.md)
+  api:
+    build: ../api                      # se construye con api/Dockerfile (misma imagen base que Jupyter)
+    container_name: api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"          # http://localhost:8000
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000   # de aquí saca los modelos con el alias "actual"
+    depends_on:
+      - mlflow
+    healthcheck:                       # "healthy" cuando la API responde (aunque aún no haya modelos registrados)
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/salud', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
 # Volúmenes con nombre: Docker los guarda aparte, así los datos de HDFS
 # sobreviven a "docker compose down". Solo "down -v" los borra.
 volumes:
