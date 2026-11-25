@@ -27,7 +27,11 @@ No hace falta instalar Python, Hadoop ni Jupyter directamente en Windows. Docker
 
 ## Preparar el repositorio
 
-Clona el repositorio o descarga el ZIP y extráelo en una carpeta local. Abre PowerShell y cambia a la carpeta `docker` dentro del proyecto. Por ejemplo:
+Crea una carpeta local en el equipo. 
+
+Clona el repositorio o descarga el ZIP y extráelo en la carpeta local que has creado.
+
+Abre PowerShell y cambia a la carpeta `docker` dentro del proyecto. Por ejemplo:
 
 ```powershell
 cd C:\proyectos\smart-restaurant\docker
