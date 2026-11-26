@@ -33,6 +33,7 @@ log = logging.getLogger("api.modelos")
 
 # Variables de entrada de cada modelo, en el orden en que se entrenaron (notebooks 04 y 06)
 VARIABLES_CLUSTERING = ["popularidad", "margen_medio"]
+PASOS_POPULARIDAD = 101      # cuántas popularidades se prueban para un plato nuevo sin ventas
 VARIABLES_REGRESION = ["n_platos", "num_platos_complejos", "complejidad_pedido", "cola_pedidos", "cocineros_disponibles",
                        "precipitacion_mm", "hora_dec", "dia_semana", "ingrediente_agotado", "canal", "prioridad_aux"]
 
@@ -219,18 +220,31 @@ class ModeloClustering(ModeloRegistrado):
         return extra
 
     def predecir(self, platos: pd.DataFrame) -> list[dict]:
-        """Asigna grupo a cada fila (columnas popularidad y margen_medio). Devuelve un diccionario por plato."""
+        """Asigna grupo a cada fila (columnas popularidad y margen_medio). Devuelve un diccionario por plato.
+
+        Si a un plato le falta la popularidad (plato nuevo que aún no se ha vendido) NO se inventa ese dato:
+        se prueba con todas las popularidades de la carta actual y se cuenta en qué grupo cae cada una
+        (ver `_sin_popularidad`).
+        """
         estado = self.obtener()
         try:
-            X = platos[VARIABLES_CLUSTERING]
-            grupos = estado.pipeline.predict(X)
-            z = estado.pipeline.named_steps["estandarizar"].transform(X)
-            distancias = np.linalg.norm(z - estado.extra["centroides_z"][grupos], axis=1)
+            X = platos[VARIABLES_CLUSTERING].apply(pd.to_numeric, errors="coerce").astype(float)
+            conocida = X["popularidad"].notna().to_numpy()
+            grupos = np.zeros(len(X), dtype=int)
+            distancias = np.zeros(len(X))
+            if conocida.any():
+                Xc = X[conocida]
+                grupos[conocida] = estado.pipeline.predict(Xc)
+                z = estado.pipeline.named_steps["estandarizar"].transform(Xc)
+                distancias[conocida] = np.linalg.norm(z - estado.extra["centroides_z"][grupos[conocida]], axis=1)
         except Exception as error:
             log.exception("Fallo al predecir el clustering")
             raise ErrorPrediccion("No se pudo calcular el grupo de los platos enviados.") from error
         rango, nombres, salida = estado.extra["rango"], estado.extra["nombres"], []
-        for fila, g, d in zip(platos.itertuples(index=False), grupos, distancias):
+        for i, (fila, g, d) in enumerate(zip(X.itertuples(index=False), grupos, distancias)):
+            if not conocida[i]:
+                salida.append(self._sin_popularidad(float(fila.margen_medio)))
+                continue
             avisos = []
             if rango:
                 for v in VARIABLES_CLUSTERING:
@@ -240,8 +254,49 @@ class ModeloClustering(ModeloRegistrado):
                                       f"({minimo:.3g}–{maximo:.3g}): el grupo es menos fiable.")
             nombre = nombres[int(g)]
             salida.append({"grupo": int(g), "nombre_grupo": nombre, "distancia_al_centroide": round(float(d), 3),
-                           "sugerencia": sugerencia_de(nombre), "avisos": avisos})
+                           "sugerencia": sugerencia_de(nombre), "avisos": avisos,
+                           "popularidad_conocida": True, "grupos_posibles": []})
         return salida
+
+    def _sin_popularidad(self, margen: float) -> dict:
+        """Plato nuevo: se conoce el margen (precio − coste) pero no la popularidad, que solo existe cuando ya se ha vendido.
+
+        El modelo necesita las dos variables, así que no puede dar un grupo "seguro". Lo que hacemos es recorrer
+        todas las popularidades que se han visto en la carta actual (de la mínima a la máxima), clasificar el plato con
+        cada una y contar en qué grupo cae. El resultado es un reparto ("el 62 % de las veces sería Estrella…") y no una
+        sola respuesta; el grupo principal es el más repetido y se marca como PROVISIONAL.
+        """
+        estado = self.obtener()
+        rango = estado.extra["rango"]
+        if rango:
+            minimo, maximo = rango["popularidad"]
+        else:                                                              # sin tabla de platos: usamos el rango de los centroides
+            columna = estado.extra["centroides"][:, 0]
+            minimo, maximo = float(columna.min()), float(columna.max())
+        recorrido = pd.DataFrame({"popularidad": np.linspace(minimo, maximo, PASOS_POPULARIDAD), "margen_medio": margen})
+        try:
+            grupos = estado.pipeline.predict(recorrido[VARIABLES_CLUSTERING])
+        except Exception as error:
+            log.exception("Fallo al predecir un plato sin popularidad")
+            raise ErrorPrediccion("No se pudo calcular el grupo del plato enviado.") from error
+        nombres = estado.extra["nombres"]
+        cuentas = pd.Series(grupos).value_counts()
+        posibles = [{"grupo": int(g), "nombre_grupo": nombres[int(g)], "porcentaje": round(100 * n / len(grupos), 1)}
+                    for g, n in cuentas.items()]                           # ya vienen de más a menos frecuente
+        principal = posibles[0]
+        avisos = [f"No se ha indicado la popularidad: el grupo es PROVISIONAL. Se ha probado con las {PASOS_POPULARIDAD} "
+                  f"popularidades de la carta actual ({minimo:.3g}–{maximo:.3g}) y el plato cae en "
+                  f"{'un solo grupo' if len(posibles) == 1 else f'{len(posibles)} grupos distintos'}."]
+        if rango and not rango["margen_medio"][0] <= margen <= rango["margen_medio"][1]:
+            minimo_m, maximo_m = rango["margen_medio"]
+            avisos.append(f"margen_medio={margen:g} queda fuera del rango de la carta actual ({minimo_m:.3g}–{maximo_m:.3g}): "
+                          "el grupo es menos fiable.")
+        decide = principal["porcentaje"] >= 90
+        avisos.append("El margen ya decide el grupo; aun así, confirma con la popularidad real cuando haya ventas." if decide else
+                      "El margen no basta para decidir el grupo: espera a tener ventas reales y vuelve a clasificarlo con su popularidad.")
+        return {"grupo": principal["grupo"], "nombre_grupo": principal["nombre_grupo"], "distancia_al_centroide": None,
+                "sugerencia": sugerencia_de(principal["nombre_grupo"]), "avisos": avisos,
+                "popularidad_conocida": False, "grupos_posibles": posibles}
 
     def grupos(self) -> list[dict]:
         """Descripción de los grupos: centroide, nombre, nº de platos y sugerencia."""

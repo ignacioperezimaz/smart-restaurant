@@ -112,10 +112,11 @@ def instalar_modelos_falsos(servidor: Servidor) -> None:
 
 
 @pytest.fixture(scope="module")
-def api():
+def api(tmp_path_factory):
     """API con los dos modelos (falsos) cargados. Lote máximo de 3 elementos para poder probar el límite."""
     mp = pytest.MonkeyPatch()
     mp.setenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:9")      # puerto cerrado: MLflow "caído" (falla al instante)
+    mp.setenv("RUTA_PLATOS_NUEVOS", str(tmp_path_factory.mktemp("datos") / "platos_nuevos.csv"))   # nunca se toca el CSV real
     mp.setenv("MAX_LOTE", "3")
     servidor = Servidor().arrancar()
     instalar_modelos_falsos(servidor)
@@ -125,12 +126,28 @@ def api():
 
 
 @pytest.fixture(scope="module")
-def api_sin_modelos():
+def api_sin_modelos(tmp_path_factory):
     """API arrancada sin modelos (MLflow caído)."""
     mp = pytest.MonkeyPatch()
     mp.setenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:9")
+    mp.setenv("RUTA_PLATOS_NUEVOS", str(tmp_path_factory.mktemp("datos_sm") / "platos_nuevos.csv"))
     mp.setenv("ESPERA_REINTENTO_S", "0")
     servidor = Servidor().arrancar()
+    yield servidor
+    servidor.parar()
+    mp.undo()
+
+
+@pytest.fixture(scope="module")
+def api_almacen(tmp_path_factory):
+    """API con modelos falsos y un CSV de platos nuevos en una carpeta temporal (para probar el guardado permanente)."""
+    mp = pytest.MonkeyPatch()
+    mp.setenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:9")
+    ruta = tmp_path_factory.mktemp("datos_almacen") / "platos_nuevos.csv"
+    mp.setenv("RUTA_PLATOS_NUEVOS", str(ruta))
+    servidor = Servidor().arrancar()
+    instalar_modelos_falsos(servidor)
+    servidor.ruta_csv = ruta
     yield servidor
     servidor.parar()
     mp.undo()

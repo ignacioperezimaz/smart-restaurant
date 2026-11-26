@@ -1,0 +1,12 @@
+Bandeja de entrada de datos para HDFS
+=====================================
+Deja aquí tus CSV y ejecuta (desde la carpeta docker/):
+
+    docker exec namenode bash /scripts/ingesta_hdfs.sh
+
+- Los CSV que estén directamente en esta carpeta van al lote principal.
+- Los CSV dentro de una subcarpeta (p. ej. entrada/lote_drift/) van a un lote con ese nombre:
+  /datalake/raw/<fuente>/lote=<nombre_subcarpeta>/
+- El nombre del fichero da igual: se reconoce por sus columnas. Para ver cuáles se exigen:
+
+    docker exec namenode bash /scripts/ingesta_hdfs.sh --esquema

@@ -32,9 +32,13 @@ def test_modelos_y_recarga_con_mlflow_caido_conserva_la_version_cargada(api):
                     "canal": "mesa"}).status_code == 200
 
 
-def test_raiz_redirige_a_la_documentacion(api):
+def test_raiz_redirige_a_la_interfaz_y_la_interfaz_se_sirve(api):
     r = api.get("/", allow_redirects=False)
-    assert r.status_code in (302, 307) and r.headers["location"] == "/docs"
+    assert r.status_code in (302, 307) and r.headers["location"] == "/interfaz/"
+    pagina = api.get("/interfaz/")
+    assert pagina.status_code == 200 and "Panel de predicciones" in pagina.text
+    for recurso in ("estilos.css", "app.js", "assets/smart-restaurant_negativo.png", "assets/Montserrat-variable.woff"):
+        assert api.get("/interfaz/" + recurso).status_code == 200, recurso
 
 
 def test_documentacion_openapi_incluye_todas_las_rutas(api):
@@ -67,6 +71,37 @@ def test_clustering_avisa_si_el_plato_esta_fuera_del_rango_de_la_carta(api):
     assert any("fuera del rango" in a for a in cuerpo["avisos"])
 
 
+def test_clustering_plato_nuevo_sin_popularidad_da_reparto_provisional(api):
+    """Si falta la popularidad no se inventa: se prueba con todas las de la carta y se devuelve el reparto de grupos."""
+    for cuerpo_peticion in ({"margen_medio": 10.0}, {"margen_medio": 10.0, "popularidad": None}):
+        r = api.post("/clustering/predecir", json=cuerpo_peticion)
+        assert r.status_code == 200
+        cuerpo = r.json()
+        assert cuerpo["popularidad_conocida"] is False and cuerpo["distancia_al_centroide"] is None
+        posibles = cuerpo["grupos_posibles"]
+        assert posibles and abs(sum(g["porcentaje"] for g in posibles) - 100) < 0.5            # el reparto suma 100 %
+        assert [g["porcentaje"] for g in posibles] == sorted((g["porcentaje"] for g in posibles), reverse=True)
+        assert cuerpo["nombre_grupo"] == posibles[0]["nombre_grupo"]                           # el principal es el más frecuente
+        assert any("PROVISIONAL" in a for a in cuerpo["avisos"])
+
+
+def test_clustering_con_popularidad_no_trae_reparto(api):
+    cuerpo = api.post("/clustering/predecir", json={"popularidad": 0.5, "margen_medio": 9.9}).json()
+    assert cuerpo["popularidad_conocida"] is True and cuerpo["grupos_posibles"] == []
+
+
+def test_clustering_lote_mezcla_platos_con_y_sin_popularidad(api):
+    platos = [{"id_plato": "a", "margen_medio": 10.0}, {"id_plato": "b", "popularidad": 0.52, "margen_medio": 10.2}]
+    resultados = api.post("/clustering/predecir-lote", json={"platos": platos}).json()["resultados"]
+    assert [x["id_plato"] for x in resultados] == ["a", "b"]
+    assert [x["popularidad_conocida"] for x in resultados] == [False, True]
+
+
+def test_clustering_margen_sigue_siendo_obligatorio(api):
+    r = api.post("/clustering/predecir", json={"popularidad": 0.5})
+    assert r.status_code == 422 and r.json()["error"]["detalles"][0]["campo"] == "margen_medio"
+
+
 def test_clustering_grupos_y_platos(api):
     grupos = api.get("/clustering/grupos").json()
     assert len(grupos) == 4 and sum(g["n_platos"] for g in grupos) == 80
@@ -77,7 +112,11 @@ def test_clustering_grupos_y_platos(api):
 
 
 def test_clustering_plato_de_la_carta_y_plato_inexistente(api):
-    assert api.get("/clustering/platos/5").json()["id_plato"] == 5
+    plato = api.get("/clustering/platos/5").json()
+    assert plato["id_plato"] == 5 and plato["nombre"] and not plato["nombre"].startswith("Plato ")   # cada plato lleva su nombre
+    assert plato["categoria"] in ("entrante", "principal", "postre")
+    nombres = [x["nombre"] for x in api.get("/clustering/platos").json()]
+    assert len(nombres) == len(set(nombres))                                                          # y no se repite
     r = api.get("/clustering/platos/999")
     assert r.status_code == 404 and r.json()["error"]["codigo"] == "no_encontrado"
     assert "1 al 80" in r.json()["error"]["mensaje"]
@@ -202,3 +241,8 @@ def test_fallo_del_modelo_da_500_sin_detalles_internos(api, pedido):
 def test_id_de_peticion_en_cabecera_y_en_el_error(api):
     r = api.post("/regresion/predecir", json={})
     assert r.headers["X-Request-ID"] == r.json()["error"]["id_peticion"]
+
+
+def test_interfaz_no_se_guarda_en_la_cache_del_navegador(api):
+    for ruta in ("/interfaz/", "/interfaz/app.js", "/interfaz/estilos.css"):
+        assert api.get(ruta).headers.get("Cache-Control") == "no-cache"

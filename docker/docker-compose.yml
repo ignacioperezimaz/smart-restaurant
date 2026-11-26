@@ -75,7 +75,7 @@ services:
     ports:
       - "127.0.0.1:8889:8888"          # http://localhost:8889 (8889 para no chocar con otro Jupyter en 8888)
     environment:
-      - JUPYTER_TOKEN=smartrestaurant  # contraseña de acceso (solo uso local)
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}    # contraseña de acceso (solo uso local)
       - HDFS_WEBHDFS_URL=http://namenode:9870   # dirección de HDFS por WebHDFS
       - HDFS_USER=root                 # usuario con el que se escribe en HDFS
       - MLFLOW_TRACKING_URI=http://mlflow:5000  # servidor MLflow (dentro de Docker se llama "mlflow")
@@ -129,6 +129,9 @@ services:
       - "127.0.0.1:8000:8000"          # http://localhost:8000
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000   # de aquí saca los modelos con el alias "actual"
+      - RUTA_PLATOS_NUEVOS=/datos/platos_nuevos.csv   # CSV donde se guardan los platos añadidos desde la interfaz
+    volumes:
+      - ../data:/datos                 # carpeta data/ del repositorio (con escritura): ahí queda platos_nuevos.csv, y se puede subir a Git
     depends_on:
       - mlflow
     healthcheck:                       # "healthy" cuando la API responde (aunque aún no haya modelos registrados)
@@ -137,6 +140,26 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  # INGESTA (opcional): vigila data/ y data/entrada/ y sube a HDFS cualquier CSV nuevo o cambiado.
+  # No arranca con "docker compose up": se activa con   docker compose --profile ingesta up -d ingesta
+  # Usa la imagen del namenode solo por tener el cliente `hdfs`; el script es scripts/ingesta_hdfs.sh.
+  ingesta:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: ingesta
+    profiles: ["ingesta"]              # solo se levanta si se pide expresamente
+    restart: unless-stopped
+    environment:
+      - SERVICE_PRECONDITION=namenode:9000 namenode:9870 datanode:9864   # espera a que HDFS esté listo
+    env_file:
+      - ./hadoop.env                   # así el cliente sabe dónde está el namenode (fs.defaultFS)
+    command: ["bash", "/scripts/ingesta_hdfs.sh", "--vigilar", "30"]   # revisa cada 30 s
+    volumes:
+      - ../data:/datos:ro              # CSV de entrada (solo lectura)
+      - ../scripts:/scripts:ro
+    depends_on:
+      - namenode
+      - datanode
 
 # Volúmenes con nombre: Docker los guarda aparte, así los datos de HDFS
 # sobreviven a "docker compose down". Solo "down -v" los borra.

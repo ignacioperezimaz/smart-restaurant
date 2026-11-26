@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 WORKDIR /home/jovyan/api
 COPY --chown=${NB_UID}:${NB_GID} app ./app
+COPY --chown=${NB_UID}:${NB_GID} interfaz ./interfaz
 
 EXPOSE 8000
 # Un solo proceso: los modelos viven en memoria y se recargan con POST /modelos/recargar

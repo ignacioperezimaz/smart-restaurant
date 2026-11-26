@@ -20,6 +20,7 @@ class Ajustes:
     alias: str                 # alias que apunta a la versión vigente de cada modelo
     max_lote: int              # máximo de elementos en una petición por lotes
     espera_reintento_s: float  # tras un fallo al cargar un modelo, segundos antes de volver a intentarlo
+    ruta_platos_nuevos: str    # CSV donde se guardan los platos añadidos desde la interfaz (en Docker: la carpeta data/ del repositorio)
 
 
 def leer_ajustes() -> Ajustes:
@@ -31,4 +32,5 @@ def leer_ajustes() -> Ajustes:
         alias=os.environ.get("ALIAS_MODELO", "actual"),
         max_lote=int(os.environ.get("MAX_LOTE", "500")),
         espera_reintento_s=float(os.environ.get("ESPERA_REINTENTO_S", "5")),
+        ruta_platos_nuevos=os.environ.get("RUTA_PLATOS_NUEVOS", "/datos/platos_nuevos.csv"),
     )

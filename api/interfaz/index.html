@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart-Restaurant · Panel de predicciones</title>
+  <meta name="description" content="Interfaz para estimar el tiempo de preparación de un pedido y ver los grupos de platos de la carta.">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/smart-restaurant_favicon_32.png">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <!-- ============================== CABECERA ============================== -->
+  <header class="cabecera">
+    <div class="cabecera__interior">
+      <img class="cabecera__logo" src="assets/smart-restaurant_negativo.png" alt="Smart-Restaurant" width="1536" height="1024">
+      <div class="cabecera__texto">
+        <h1>Panel de predicciones</h1>
+        <p>Big Data e Inteligencia Artificial para la cocina y la carta</p>
+      </div>
+      <div class="cabecera__estado">
+        <span id="estado-api" class="estado estado--cargando" role="status" aria-live="polite">
+          <span class="estado__punto" aria-hidden="true"></span>
+          <span id="estado-api-texto">Comprobando la API…</span>
+        </span>
+        <a class="cabecera__enlace" href="/docs" target="_blank" rel="noopener">Documentación de la API</a>
+      </div>
+    </div>
+
+    <!-- Pestañas: un objetivo en cada una -->
+    <nav class="pestanas" aria-label="Secciones">
+      <div class="pestanas__interior" role="tablist" aria-label="Elige qué quieres hacer">
+        <button class="pestana" role="tab" id="pestana-tiempo" aria-controls="panel-tiempo" aria-selected="true" data-seccion="tiempo">
+          <span class="pestana__titulo">Estimar tiempo</span>
+          <span class="pestana__sub">Objetivo 2 · pedidos</span>
+        </button>
+        <button class="pestana" role="tab" id="pestana-platos" aria-controls="panel-platos" aria-selected="false" tabindex="-1" data-seccion="platos">
+          <span class="pestana__titulo">Ver grupos de platos</span>
+          <span class="pestana__sub">Objetivo 1 · carta</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main id="contenido" class="contenido" tabindex="-1">
+    <p class="aviso-muestra">
+      <strong>Datos de muestra.</strong> Los datos del proyecto son sintéticos (generados con un programa): sirven para demostrar el sistema,
+      no para tomar decisiones en un restaurante real.
+    </p>
+
+    <!-- ============================== SECCIÓN 1: TIEMPO DE UN PEDIDO ============================== -->
+    <section id="panel-tiempo" class="panel" role="tabpanel" aria-labelledby="pestana-tiempo">
+      <div class="rejilla-tiempo">
+
+        <!-- Formulario -->
+        <form id="form-pedido" class="tarjeta" novalidate autocomplete="off">
+          <div class="tarjeta__cabecera">
+            <h2>El pedido</h2>
+            <p>El cliente elige los platos; la cocina aporta cómo está el servicio.</p>
+          </div>
+
+          <div class="ejemplos" role="group" aria-label="Ejemplos con datos de muestra">
+            <span class="ejemplos__titulo">Ejemplos de muestra:</span>
+            <div class="ejemplos__fila">
+              <button type="button" class="chip" data-ejemplo="tranquilo">Cocina tranquila</button>
+              <button type="button" class="chip" data-ejemplo="punta">Hora punta</button>
+              <button type="button" class="chip" data-ejemplo="saturada">Cocina saturada</button>
+            </div>
+          </div>
+
+          <div class="subpestanas" role="tablist" aria-label="Quién rellena los datos">
+            <button type="button" class="subpestana" role="tab" id="subpestana-cliente" data-sub="cliente" aria-selected="true" aria-controls="subpanel-cliente">
+              Cliente <small>elige los platos</small></button>
+            <button type="button" class="subpestana" role="tab" id="subpestana-cocina" data-sub="cocina" aria-selected="false" aria-controls="subpanel-cocina" tabindex="-1">
+              Cocina <small>cómo está el servicio</small></button>
+          </div>
+
+          <!-- ===== Cliente: carta, cesta y botones ===== -->
+          <div id="subpanel-cliente" class="subpanel" role="tabpanel" aria-labelledby="subpestana-cliente">
+            <label class="sr-only" for="buscar-plato">Buscar un plato</label>
+            <input id="buscar-plato" type="search" placeholder="Buscar un plato…" autocomplete="off">
+            <div id="menu" class="menu" tabindex="0" role="region" aria-label="Carta de platos: elige unidades de cada uno">
+              <div class="esqueleto" style="height:220px"></div>
+            </div>
+            <div id="cesta" class="cesta" aria-live="polite"></div>
+            <p class="campo__error" id="error-n_platos" role="alert"></p>
+            <div class="acciones">
+              <button type="button" class="boton boton--principal" id="boton-pedir">Pedir</button>
+              <button type="button" class="boton boton--secundario" id="boton-estimar">Estimar tiempo de preparación</button>
+            </div>
+            <div id="confirmacion-pedido" aria-live="polite"></div>
+          </div>
+
+          <!-- ===== Cocina: el resto de datos del pedido ===== -->
+          <div id="subpanel-cocina" class="subpanel" role="tabpanel" aria-labelledby="subpestana-cocina" hidden>
+            <p class="nota nota--arriba">Estos datos se usan al estimar el pedido del cliente. Tras la primera estimación, el resultado se actualiza solo al cambiarlos.</p>
+            <fieldset class="grupo">
+              <legend>El pedido</legend>
+            <div class="fila-2">
+              <div class="campo">
+                <span class="etiqueta" id="et-canal">Canal</span>
+                <div class="segmentos" role="radiogroup" aria-labelledby="et-canal">
+                  <label class="segmento"><input type="radio" name="canal" value="mesa"><span>Mesa</span></label>
+                  <label class="segmento"><input type="radio" name="canal" value="delivery" checked><span>Delivery</span></label>
+                  <label class="segmento"><input type="radio" name="canal" value="takeaway"><span>Takeaway</span></label>
+                </div>
+              </div>
+              <div class="campo">
+                <span class="etiqueta" id="et-prioridad">Prioridad</span>
+                <div class="segmentos" role="radiogroup" aria-labelledby="et-prioridad">
+                  <label class="segmento"><input type="radio" name="prioridad_aux" value="normal" checked><span>Normal</span></label>
+                  <label class="segmento"><input type="radio" name="prioridad_aux" value="prioridad"><span>Prioridad</span></label>
+                  <label class="segmento"><input type="radio" name="prioridad_aux" value="VIP"><span>VIP</span></label>
+                </div>
+              </div>
+            </div>
+
+            <label class="interruptor">
+              <input type="checkbox" id="ingrediente_agotado" name="ingrediente_agotado" role="switch">
+              <span class="interruptor__pista" aria-hidden="true"></span>
+              <span class="interruptor__texto">Falta algún ingrediente del pedido</span>
+            </label>
+          </fieldset>
+
+          <fieldset class="grupo">
+            <legend>La cocina</legend>
+            <div class="campo" id="bloque-cola">
+              <span class="etiqueta">Pedidos en cola</span>
+              <p class="cola-valor"><strong id="cola-numero">0</strong> <span>pedidos</span></p>
+              <p class="campo__ayuda">No se ajusta a mano: es el número de pedidos recibidos que siguen pendientes. Sube al pedir desde Cliente y baja al marcarlos como listos. El modelo vio de 0 a 20.</p>
+              <p class="resumen-cola" id="resumen-cola" aria-live="polite" hidden></p>
+            </div>
+            <div class="campo campo--deslizador" data-campo="cocineros_disponibles">
+              <label for="cocineros_disponibles">Cocineros disponibles <span class="unidad">personas</span></label>
+              <div class="deslizador">
+                <input type="range" id="cocineros_disponibles-rango" min="1" max="7" step="1" value="5" aria-label="Cocineros disponibles, deslizador">
+                <input id="cocineros_disponibles" name="cocineros_disponibles" type="number" inputmode="numeric" min="1" max="7" step="1" value="5" aria-describedby="ayuda-cocineros_disponibles error-cocineros_disponibles">
+              </div>
+              <p class="campo__ayuda" id="ayuda-cocineros_disponibles">De 1 a 7 cocineros, el rango con el que se entrenó el modelo.</p>
+              <p class="campo__error" id="error-cocineros_disponibles" role="alert"></p>
+            </div>
+          </fieldset>
+
+          <fieldset class="grupo">
+            <legend>El momento</legend>
+            <div class="fila-2">
+              <div class="campo" data-campo="hora_dec">
+                <label for="hora">Hora de entrada</label>
+                <input id="hora" name="hora" type="time" value="20:30" min="10:00" max="23:00" aria-describedby="ayuda-hora error-hora_dec">
+                <p class="campo__ayuda" id="ayuda-hora">El restaurante abre de 10:00 a 23:00: no se admiten otras horas.</p>
+                <p class="campo__error" id="error-hora_dec" role="alert"></p>
+              </div>
+              <div class="campo" data-campo="precipitacion_mm">
+                <label for="precipitacion_mm">Lluvia <span class="unidad">mm</span></label>
+                <input id="precipitacion_mm" name="precipitacion_mm" type="number" inputmode="decimal" min="0" max="500" step="0.5" value="0" aria-describedby="error-precipitacion_mm">
+                <p class="campo__error" id="error-precipitacion_mm" role="alert"></p>
+              </div>
+            </div>
+            <div class="campo" data-campo="dia_semana">
+              <span class="etiqueta" id="et-dia">Día de la semana</span>
+              <div class="segmentos segmentos--dias" role="radiogroup" aria-labelledby="et-dia">
+                <label class="segmento"><input type="radio" name="dia_semana" value="1"><span title="Lunes (cerrado)">L</span></label>
+                <label class="segmento"><input type="radio" name="dia_semana" value="2"><span title="Martes">M</span></label>
+                <label class="segmento"><input type="radio" name="dia_semana" value="3"><span title="Miércoles">X</span></label>
+                <label class="segmento"><input type="radio" name="dia_semana" value="4"><span title="Jueves">J</span></label>
+                <label class="segmento"><input type="radio" name="dia_semana" value="5"><span title="Viernes">V</span></label>
+                <label class="segmento"><input type="radio" name="dia_semana" value="6" checked><span title="Sábado">S</span></label>
+                <label class="segmento"><input type="radio" name="dia_semana" value="7"><span title="Domingo">D</span></label>
+              </div>
+              <p class="campo__ayuda" id="dia-nombre">Sábado</p>
+            </div>
+          </fieldset>
+
+            <div class="acciones">
+              <button type="button" class="boton boton--secundario" id="boton-restablecer">Restablecer todo</button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Resultado -->
+        <aside class="tarjeta resultado" aria-labelledby="titulo-resultado">
+          <div class="tarjeta__cabecera">
+            <h2 id="titulo-resultado">Tiempo estimado</h2>
+          </div>
+          <div id="resultado-tiempo" aria-live="polite" aria-atomic="true">
+            <!-- Aquí se dibuja el estado: vacío, cargando, resultado o error -->
+          </div>
+        
+      <section class="recibidos" id="bloque-recibidos" hidden aria-labelledby="titulo-recibidos">
+        <h3 id="titulo-recibidos">Pedidos recibidos</h3>
+        <p class="nota">Los que se piden desde la pestaña Cliente: cada uno es un pedido más en la cola de cocina. Al marcarlo como listo sale de la cola y el tiempo estimado baja. Solo se guardan mientras esta página está abierta.</p>
+        <ol id="pedidos-recibidos" class="recibidos__lista"><li class="recibidos__vacio">Todavía no ha entrado ningún pedido.</li></ol>
+      </section>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============================== SECCIÓN 2: GRUPOS DE PLATOS ============================== -->
+    <section id="panel-platos" class="panel" role="tabpanel" aria-labelledby="pestana-platos" hidden>
+      <div class="rejilla-platos">
+
+        <form id="form-plato" class="tarjeta" novalidate autocomplete="off">
+          <div class="tarjeta__cabecera">
+            <h2>Añadir un plato</h2>
+            <p>Escribe los datos del plato: el margen se calcula solo (precio − coste). Se guarda para siempre. Si aún no tiene ventas, puedes verlo y guardarlo con la popularidad media de su categoría.</p>
+          </div>
+          <div class="campo" data-campo="nombre">
+            <label for="nombre">Nombre</label>
+            <input id="nombre" name="nombre" type="text" maxlength="60" placeholder="Por ejemplo, Tarta de la abuela" aria-describedby="error-nombre">
+            <p class="campo__error" id="error-nombre" role="alert"></p>
+          </div>
+          <div class="campo" data-campo="categoria">
+            <label for="categoria">Categoría</label>
+            <select id="categoria" name="categoria" aria-describedby="error-categoria">
+              <option value="entrante">Entrante</option>
+              <option value="principal">Principal</option>
+              <option value="postre">Postre</option>
+            </select>
+            <p class="campo__error" id="error-categoria" role="alert"></p>
+          </div>
+          <div class="fila-dos">
+            <div class="campo" data-campo="precio_medio">
+              <label for="precio_medio">Precio <span class="unidad">€</span></label>
+              <input id="precio_medio" name="precio_medio" type="number" inputmode="decimal" min="0" max="1000" step="0.01" value="16" aria-describedby="error-precio_medio">
+              <p class="campo__error" id="error-precio_medio" role="alert"></p>
+            </div>
+            <div class="campo" data-campo="coste_medio">
+              <label for="coste_medio">Coste <span class="unidad">€</span></label>
+              <input id="coste_medio" name="coste_medio" type="number" inputmode="decimal" min="0" max="1000" step="0.01" value="6" aria-describedby="error-coste_medio">
+              <p class="campo__error" id="error-coste_medio" role="alert"></p>
+            </div>
+          </div>
+          <div class="campo" data-campo="dificultad">
+            <label for="dificultad">Dificultad <span class="unidad">de 1 (fácil) a 10 (difícil)</span></label>
+            <input id="dificultad" name="dificultad" type="number" inputmode="numeric" min="1" max="10" step="1" value="5" aria-describedby="error-dificultad">
+            <p class="campo__error" id="error-dificultad" role="alert"></p>
+          </div>
+          <div class="margen-calculado" aria-live="polite">
+            <span>Margen unitario</span><strong id="margen-calculado">10,00 €</strong>
+            <small id="ayuda-margen">Precio − coste. En la carta actual, entre 9,58 y 10,21 €.</small>
+          </div>
+          <div class="campo" data-campo="popularidad">
+            <label for="popularidad">Popularidad <span class="unidad">unidades vendidas por cliente</span></label>
+            <input id="popularidad" name="popularidad" type="number" inputmode="decimal" min="0" max="100" step="0.001" value="0.52" aria-describedby="ayuda-popularidad error-popularidad">
+            <p class="campo__ayuda" id="ayuda-popularidad" data-rango="popularidad">En la carta actual, entre 0,47 y 0,52.</p>
+            <p class="campo__error" id="error-popularidad" role="alert"></p>
+          </div>
+          <div class="campo-nuevo">
+            <label class="interruptor interruptor--pequeno">
+              <input type="checkbox" id="sin-popularidad" role="switch" aria-describedby="ayuda-sin-popularidad">
+              <span class="interruptor__pista" aria-hidden="true"></span>
+              <span class="interruptor__texto">Plato nuevo: aún no tiene ventas</span>
+            </label>
+            <p class="campo__ayuda" id="ayuda-sin-popularidad" hidden>Sin ventas no hay popularidad. «Ver dónde cae» prueba el plato con todas las popularidades de la carta y te dice en qué grupos puede caer. Si lo guardas, se usará la <strong>media de su categoría</strong>, marcada como estimada, y podrás poner la real cuando tenga ventas.</p>
+            <p class="nota-media" id="nota-media" hidden></p>
+          </div>
+          <div class="acciones">
+            <button type="button" class="boton boton--principal" id="boton-guardar">Guardar plato</button>
+            <button type="submit" class="boton boton--secundario" id="boton-clasificar">Ver dónde cae</button>
+            <button type="button" class="boton boton--secundario" id="boton-quitar-plato" hidden>Quitar del gráfico</button>
+          </div>
+          <div id="resultado-plato" aria-live="polite" aria-atomic="true"></div>
+        </form>
+
+        <section class="tarjeta tarjeta--grafico" aria-labelledby="titulo-grafico">
+          <div class="tarjeta__cabecera">
+            <h2 id="titulo-grafico">La carta actual, plato a plato</h2>
+            <p>Cada punto es un plato: pasa el ratón por encima para ver su nombre. Las zonas de color son el grupo en el que caería un plato nuevo según el modelo. Pulsa un grupo de la leyenda para filtrar.</p>
+          </div>
+          <div id="leyenda" class="leyenda" role="group" aria-label="Filtrar por grupo"></div>
+          <div class="barra-grafico">
+            <p id="detalle-plato" class="detalle-plato" aria-live="polite">Pasa el ratón por un punto para ver el plato.</p>
+          </div>
+          <div id="grafico" class="grafico" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <section aria-labelledby="titulo-grupos" class="bloque">
+        <h2 id="titulo-grupos" class="titulo-bloque">Los grupos de platos</h2>
+        <div id="tarjetas-grupos" class="tarjetas-grupos"></div>
+      </section>
+
+      <section aria-labelledby="titulo-tabla" class="bloque">
+        <h2 id="titulo-tabla" class="titulo-bloque">Platos de la carta</h2>
+        <p id="resumen-tabla" class="nota"></p>
+        <div class="tabla-contenedor" tabindex="0" role="region" aria-labelledby="titulo-tabla">
+          <table class="tabla" id="tabla-platos">
+            <thead>
+              <tr>
+                <th scope="col"><button type="button" data-orden="nombre">Plato</button></th>
+                <th scope="col"><button type="button" data-orden="categoria">Categoría</button></th>
+                <th scope="col"><button type="button" data-orden="nombre_grupo">Grupo</button></th>
+                <th scope="col" class="num"><button type="button" data-orden="popularidad">Popularidad <small>(uds./cliente)</small></button></th>
+                <th scope="col" class="num"><button type="button" data-orden="margen_medio">Margen <small>(€)</small></button></th>
+                <th scope="col" class="num"><button type="button" data-orden="precio_medio">Precio <small>(€)</small></button></th>
+                <th scope="col" class="num"><button type="button" data-orden="coste_medio">Coste <small>(€)</small></button></th>
+                <th scope="col" class="num"><button type="button" data-orden="valoracion">Valoración</button></th>
+                <th scope="col" class="num"><button type="button" data-orden="dificultad">Dificultad</button></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p>Smart-Restaurant · Proyecto de Big Data e Inteligencia Artificial · Maitane Herrera, Julen Altuna e Ignacio Pérez</p>
+    <p>Esta interfaz usa la API del proyecto (<code>/regresion</code> y <code>/clustering</code>), que lee los modelos registrados en MLflow.</p>
+  </footer>
+
+  <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

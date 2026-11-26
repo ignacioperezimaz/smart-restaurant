@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from fastapi import Request
 
+from .almacen import AlmacenPlatos
 from .config import Ajustes
 from .errores import ErrorAPI, ErrorRespuesta
 from .modelos import ModeloClustering, ModeloRegresion
@@ -16,6 +17,7 @@ class Modelos:
     ajustes: Ajustes
     clustering: ModeloClustering
     regresion: ModeloRegresion
+    almacen: AlmacenPlatos
 
 
 class LoteDemasiadoGrande(ErrorAPI):
@@ -40,4 +42,6 @@ ERR_VALIDACION = {"model": ErrorRespuesta, "description": "Los datos enviados no
 ERR_MODELO = {"model": ErrorRespuesta, "description": "El modelo no está disponible: MLflow caído o modelo todavía sin registrar."}
 ERR_LOTE = {"model": ErrorRespuesta, "description": "El lote supera el máximo de elementos permitido."}
 ERR_INTERNO = {"model": ErrorRespuesta, "description": "Error interno al calcular la predicción."}
+ERR_CONFLICTO = {"model": ErrorRespuesta, "description": "Ya existe un plato con ese nombre."}
+ERR_ALMACEN = {"model": ErrorRespuesta, "description": "No se puede leer o escribir el CSV de platos nuevos."}
 ERR_NO_ENCONTRADO = {"model": ErrorRespuesta, "description": "El recurso pedido no existe."}

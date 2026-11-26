@@ -1,7 +1,7 @@
 """Punto de entrada de la API de Smart-Restaurant.
 
 Arranque (dentro de Docker lo hace el servicio `api`):  uvicorn app.main:app --host 0.0.0.0 --port 8000
-Documentación interactiva:  http://localhost:8000/docs   (y una versión de solo lectura en /redoc)
+Interfaz web:  http://localhost:8000   ·   Documentación interactiva:  http://localhost:8000/docs   (y /redoc)
 """
 from __future__ import annotations
 
@@ -9,15 +9,19 @@ import logging
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from . import __version__
+from .almacen import AlmacenPlatos
 from .config import leer_ajustes
 from .dependencias import Modelos
 from .errores import ModeloNoDisponible, registrar_manejadores
 from .modelos import ModeloClustering, ModeloRegresion
+from .nombres_platos import NOMBRES
 from .rutas_clustering import router as router_clustering
 from .rutas_regresion import router as router_regresion
 from .rutas_sistema import router as router_sistema
@@ -71,13 +75,24 @@ async def ciclo_de_vida(app: FastAPI):
     """Al arrancar: crea los modelos e intenta cargarlos. Si MLflow no está listo, la API arranca igualmente (modo degradado)."""
     ajustes = leer_ajustes()
     app.state.modelos = Modelos(ajustes=ajustes, clustering=ModeloClustering(ajustes, ajustes.modelo_clustering),
-                                regresion=ModeloRegresion(ajustes, ajustes.modelo_regresion))
+                                regresion=ModeloRegresion(ajustes, ajustes.modelo_regresion),
+                                almacen=AlmacenPlatos(ajustes.ruta_platos_nuevos, NOMBRES))
     for modelo in (app.state.modelos.clustering, app.state.modelos.regresion):
         try:
             modelo.recargar()
         except ModeloNoDisponible as error:
             log.warning("Arranque sin el modelo '%s': %s", modelo.nombre, error.mensaje)
     yield
+
+
+class InterfazEstatica(StaticFiles):
+    """Archivos de la interfaz con `Cache-Control: no-cache`: el navegador pregunta cada vez si han cambiado
+    (si no, tras reconstruir la imagen podía seguir enseñando el HTML/JS/CSS antiguo guardado en su caché)."""
+
+    def file_response(self, *args, **kwargs):
+        respuesta = super().file_response(*args, **kwargs)
+        respuesta.headers["Cache-Control"] = "no-cache"
+        return respuesta
 
 
 def crear_app() -> FastAPI:
@@ -98,11 +113,16 @@ def crear_app() -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     def inicio():
-        return RedirectResponse("/docs")
+        return RedirectResponse("/interfaz/")        # la página principal es la interfaz; la documentación está en /docs
 
     app.include_router(router_sistema)
     app.include_router(router_clustering)
     app.include_router(router_regresion)
+
+    # Interfaz web (HTML + CSS + JavaScript): la sirve la propia API, así comparte servidor y no hace falta configurar CORS
+    carpeta_interfaz = Path(__file__).resolve().parent.parent / "interfaz"
+    if carpeta_interfaz.is_dir():
+        app.mount("/interfaz", InterfazEstatica(directory=carpeta_interfaz, html=True), name="interfaz")
     return app
 
 
