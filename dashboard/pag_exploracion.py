@@ -136,7 +136,8 @@ def pagina_eda_pedidos() -> None:
         tb = _media_por(df.assign(carga=carga.clip(upper=8)), "carga")
         der.plotly_chart(g.linea_media(tb, "carga", "media", "pedidos", "Tiempo medio según pedidos en cola por cocinero",
                                        "pedidos en cola por cocinero", "tiempo medio (min)", banda=("q25", "q75"), alto=400), width="stretch")
-        der.caption("Cola dividida entre cocineros: la curva sube cada vez más deprisa (no es una recta). Por eso el Random Forest acierta más que la regresión lineal.")
+        der.caption("Cola dividida entre cocineros: la curva sube cada vez más deprisa (no es una recta). Por eso el Random Forest acierta más que la regresión lineal. "
+                   "No se dibujan los valores con menos de 30 pedidos.")
 
     # ------------------------------------------------------------------ 5. correlaciones
     with tab5:

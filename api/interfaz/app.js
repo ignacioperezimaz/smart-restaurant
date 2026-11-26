@@ -986,4 +986,4 @@ actualizarMargen();
 $$("input[type=range]").forEach(pintarRelleno);
 comprobarSalud();
 setInterval(comprobarSalud, 60000);                                             // el chip de estado se refresca cada minuto
-mostrarSeccion(location.hash === "#platos" ? "platos" : "tiempo");
+mostrarSeccion(location.hash === "#tiempo" ? "tiempo" : "platos");     // la primera pestaña (Objetivo 1) es la que se abre por defecto

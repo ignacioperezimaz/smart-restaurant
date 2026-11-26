@@ -31,13 +31,13 @@
     <!-- Pestañas: un objetivo en cada una -->
     <nav class="pestanas" aria-label="Secciones">
       <div class="pestanas__interior" role="tablist" aria-label="Elige qué quieres hacer">
-        <button class="pestana" role="tab" id="pestana-tiempo" aria-controls="panel-tiempo" aria-selected="true" data-seccion="tiempo">
-          <span class="pestana__titulo">Estimar tiempo</span>
-          <span class="pestana__sub">Objetivo 2 · pedidos</span>
-        </button>
-        <button class="pestana" role="tab" id="pestana-platos" aria-controls="panel-platos" aria-selected="false" tabindex="-1" data-seccion="platos">
+        <button class="pestana" role="tab" id="pestana-platos" aria-controls="panel-platos" aria-selected="true" data-seccion="platos">
           <span class="pestana__titulo">Ver grupos de platos</span>
           <span class="pestana__sub">Objetivo 1 · carta</span>
+        </button>
+        <button class="pestana" role="tab" id="pestana-tiempo" aria-controls="panel-tiempo" aria-selected="false" tabindex="-1" data-seccion="tiempo">
+          <span class="pestana__titulo">Estimar tiempo</span>
+          <span class="pestana__sub">Objetivo 2 · pedidos</span>
         </button>
       </div>
     </nav>
@@ -50,7 +50,7 @@
     </p>
 
     <!-- ============================== SECCIÓN 1: TIEMPO DE UN PEDIDO ============================== -->
-    <section id="panel-tiempo" class="panel" role="tabpanel" aria-labelledby="pestana-tiempo">
+    <section id="panel-tiempo" class="panel" role="tabpanel" aria-labelledby="pestana-tiempo" hidden>
       <div class="rejilla-tiempo">
 
         <!-- Formulario -->
@@ -197,7 +197,7 @@
     </section>
 
     <!-- ============================== SECCIÓN 2: GRUPOS DE PLATOS ============================== -->
-    <section id="panel-platos" class="panel" role="tabpanel" aria-labelledby="pestana-platos" hidden>
+    <section id="panel-platos" class="panel" role="tabpanel" aria-labelledby="pestana-platos">
       <div class="rejilla-platos">
 
         <form id="form-plato" class="tarjeta" novalidate autocomplete="off">

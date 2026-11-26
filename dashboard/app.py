@@ -249,8 +249,8 @@ menu = st.navigation({
         st.Page(pag_exploracion.pagina_eda_ventas, title="Ventas: cómo se venden los platos", icon=":material/bar_chart:", url_path="eda-ventas"),
     ],
     "Modelos": [
-        st.Page(pag_modelos.pagina_clustering, title="Clustering de platos", icon=":material/bubble_chart:", url_path="clustering"),
         st.Page(pag_modelos.pagina_regresion, title="Tiempo de preparación", icon=":material/timer:", url_path="regresion"),
+        st.Page(pag_modelos.pagina_clustering, title="Clustering de platos", icon=":material/bubble_chart:", url_path="clustering"),
     ],
     "Monitorización": [
         st.Page(pag_drift.pagina_drift, title="Drift del modelo", icon=":material/monitor_heart:", url_path="drift"),

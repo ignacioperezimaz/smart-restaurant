@@ -64,8 +64,10 @@ def barras_categorias_doble(ref: pd.Series, nuevo: pd.Series, nombre_ref: str, n
 
 
 def linea_media(tabla: pd.DataFrame, x: str, y: str, n: str, titulo: str, etiqueta_x: str, etiqueta_y: str,
-                banda: tuple[str, str] | None = None, alto: int = 340) -> go.Figure:
-    """Tiempo medio según el valor de una variable. El tamaño del punto indica cuántos pedidos hay (más pedidos = más fiable)."""
+                banda: tuple[str, str] | None = None, alto: int = 340, minimo: int = 30) -> go.Figure:
+    """Tiempo medio según el valor de una variable. El tamaño del punto indica cuántos pedidos hay (más pedidos = más fiable).
+    Los valores con menos de `minimo` pedidos no se dibujan: una media de 2 pedidos no es fiable y creaba picos falsos en los extremos."""
+    tabla = tabla[tabla[n] >= minimo]
     fig = go.Figure()
     if banda:
         fig.add_scatter(x=tabla[x], y=tabla[banda[1]], mode="lines", line=dict(width=0), showlegend=False, hoverinfo="skip")

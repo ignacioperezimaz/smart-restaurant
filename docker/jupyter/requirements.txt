@@ -5,3 +5,5 @@ fsspec
 requests
 # Cliente ligero de MLflow (misma versión que el servidor)
 mlflow-skinny==2.22.5
+# Guardar modelos de scikit-learn en formato seguro .skops
+skops
