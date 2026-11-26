@@ -1,171 +1,172 @@
-# ============================================================
-# smart-restaurant · Clúster Hadoop (HDFS + YARN) de un solo nodo
-# Arranque:  docker compose up -d     (desde la carpeta docker/)
-# ============================================================
-services:
+  # ============================================================
+  # smart-restaurant · Clúster Hadoop (HDFS + YARN) de un solo nodo
+  # Arranque:  docker compose up -d     (desde la carpeta docker/)
+  # ============================================================
+  services:
 
-  # NAMENODE: el "índice" de HDFS. Sabe en qué bloque está cada fichero.
-  namenode:
-    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
-    container_name: namenode
-    restart: unless-stopped            # se reinicia solo si se cae
-    ports:
-      - "9870:9870"                    # interfaz web de HDFS -> http://localhost:9870
-      - "9000:9000"                    # puerto por el que los clientes hablan con HDFS
-    environment:
-      - CLUSTER_NAME=smart-restaurant  # nombre del clúster (obligatorio en esta imagen)
-    env_file:
-      - ./hadoop.env                   # configuración común de Hadoop
-    volumes:
-      - namenode_data:/hadoop/dfs/name # metadatos de HDFS (persisten al borrar el contenedor)
-      - ../data:/datos:ro              # nuestros CSV, visibles dentro como /datos (solo lectura)
-      - ../scripts:/scripts:ro         # scripts del repositorio, visibles dentro como /scripts
+    # NAMENODE: el "índice" de HDFS. Sabe en qué bloque está cada fichero.
+    namenode:
+      image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+      container_name: namenode
+      restart: unless-stopped            # se reinicia solo si se cae
+      ports:
+        - "9870:9870"                    # interfaz web de HDFS -> http://localhost:9870
+        - "9000:9000"                    # puerto por el que los clientes hablan con HDFS
+      environment:
+        - CLUSTER_NAME=smart-restaurant  # nombre del clúster (obligatorio en esta imagen)
+      env_file:
+        - ./hadoop.env                   # configuración común de Hadoop
+      volumes:
+        - namenode_data:/hadoop/dfs/name # metadatos de HDFS (persisten al borrar el contenedor)
+        - ../data:/datos:ro              # nuestros CSV, visibles dentro como /datos (solo lectura)
+        - ../scripts:/scripts:ro         # scripts del repositorio, visibles dentro como /scripts
 
-  # DATANODE: guarda físicamente los bloques de datos.
-  datanode:
-    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
-    container_name: datanode
-    restart: unless-stopped
-    ports:
-      - "9864:9864"                    # interfaz web del datanode
-    environment:
-      - SERVICE_PRECONDITION=namenode:9870   # espera a que el namenode esté listo
-    env_file:
-      - ./hadoop.env
-    volumes:
-      - datanode_data:/hadoop/dfs/data # bloques de datos (persisten)
-    depends_on:
-      - namenode
+    # DATANODE: guarda físicamente los bloques de datos.
+    datanode:
+      image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+      container_name: datanode
+      restart: unless-stopped
+      ports:
+        - "9864:9864"                    # interfaz web del datanode
+      environment:
+        - SERVICE_PRECONDITION=namenode:9870   # espera a que el namenode esté listo
+      env_file:
+        - ./hadoop.env
+      volumes:
+        - datanode_data:/hadoop/dfs/data # bloques de datos (persisten)
+      depends_on:
+        - namenode
 
-  # RESOURCEMANAGER (YARN): reparte el trabajo de cómputo.
-  resourcemanager:
-    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
-    container_name: resourcemanager
-    restart: unless-stopped
-    ports:
-      - "8088:8088"                    # interfaz web de YARN -> http://localhost:8088
-    environment:
-      - SERVICE_PRECONDITION=namenode:9000 namenode:9870 datanode:9864
-    env_file:
-      - ./hadoop.env
-    depends_on:
-      - namenode
-      - datanode
+    # RESOURCEMANAGER (YARN): reparte el trabajo de cómputo.
+    resourcemanager:
+      image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+      container_name: resourcemanager
+      restart: unless-stopped
+      ports:
+        - "8088:8088"                    # interfaz web de YARN -> http://localhost:8088
+      environment:
+        - SERVICE_PRECONDITION=namenode:9000 namenode:9870 datanode:9864
+      env_file:
+        - ./hadoop.env
+      depends_on:
+        - namenode
+        - datanode
 
-  # NODEMANAGER (YARN): ejecuta las tareas que asigna el resourcemanager.
-  nodemanager:
-    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
-    container_name: nodemanager
-    restart: unless-stopped
-    ports:
-      - "8042:8042"                    # interfaz web del nodemanager
-    environment:
-      - SERVICE_PRECONDITION=namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088
-    env_file:
-      - ./hadoop.env
-    depends_on:
-      - resourcemanager
+    # NODEMANAGER (YARN): ejecuta las tareas que asigna el resourcemanager.
+    nodemanager:
+      image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+      container_name: nodemanager
+      restart: unless-stopped
+      ports:
+        - "8042:8042"                    # interfaz web del nodemanager
+      environment:
+        - SERVICE_PRECONDITION=namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088
+      env_file:
+        - ./hadoop.env
+      depends_on:
+        - resourcemanager
 
-  # JUPYTER: entorno de trabajo para el EDA y la limpieza (pandas, numpy...).
-  # Está en la misma red que HDFS, así que ve el namenode como "namenode".
-  jupyter:
-    build: ./jupyter                   # se construye con docker/jupyter/Dockerfile
-    container_name: jupyter
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8889:8888"          # http://localhost:8889 (8889 para no chocar con otro Jupyter en 8888)
-    environment:
-      - JUPYTER_TOKEN=${JUPYTER_TOKEN}    # contraseña de acceso (solo uso local)
-      - HDFS_WEBHDFS_URL=http://namenode:9870   # dirección de HDFS por WebHDFS
-      - HDFS_USER=root                 # usuario con el que se escribe en HDFS
-      - MLFLOW_TRACKING_URI=http://mlflow:5000  # servidor MLflow (dentro de Docker se llama "mlflow")
-    volumes:
-      - ../:/home/jovyan/work          # todo el repositorio, visible dentro como /home/jovyan/work
-    depends_on:
-      - namenode
-      - datanode
-      - mlflow
+    # JUPYTER: entorno de trabajo para el EDA y la limpieza (pandas, numpy...).
+    # Está en la misma red que HDFS, así que ve el namenode como "namenode".
+    jupyter:
+      build: ./jupyter                   # se construye con docker/jupyter/Dockerfile
+      container_name: jupyter
+      restart: unless-stopped
+      env_file:
+        - jupyter.env                    # aquí está JUPYTER_TOKEN (contraseña de acceso, solo uso local)
+      ports:
+        - "127.0.0.1:8889:8888"          # http://localhost:8889 (8889 para no chocar con otro Jupyter en 8888)
+      environment:
+        - HDFS_WEBHDFS_URL=http://namenode:9870   # dirección de HDFS por WebHDFS
+        - HDFS_USER=root                 # usuario con el que se escribe en HDFS
+        - MLFLOW_TRACKING_URI=http://mlflow:5000  # servidor MLflow (dentro de Docker se llama "mlflow")
+      volumes:
+        - ../:/home/jovyan/work          # todo el repositorio, visible dentro como /home/jovyan/work
+      depends_on:
+        - namenode
+        - datanode
+        - mlflow
 
-  # MLFLOW: registra los experimentos (parámetros, métricas, gráficos) y guarda
-  # los modelos entrenados. Interfaz web -> http://localhost:5000
-  mlflow:
-    build: ./mlflow                    # se construye con docker/mlflow/Dockerfile
-    container_name: mlflow
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:5000:5000"          # http://localhost:5000
-    command: >
-      mlflow server --host 0.0.0.0 --port 5000
-      --backend-store-uri sqlite:////mlflow/mlflow.db
-      --artifacts-destination /mlflow/artifacts
-      --serve-artifacts
-    volumes:
-      - mlflow_data:/mlflow            # base de datos y modelos (persisten al borrar el contenedor)
+    # MLFLOW: registra los experimentos (parámetros, métricas, gráficos) y guarda
+    # los modelos entrenados. Interfaz web -> http://localhost:5000
+    mlflow:
+      build: ./mlflow                    # se construye con docker/mlflow/Dockerfile
+      container_name: mlflow
+      restart: unless-stopped
+      ports:
+        - "127.0.0.1:5000:5000"          # http://localhost:5000
+      command: >
+        mlflow server --host 0.0.0.0 --port 5000
+        --backend-store-uri sqlite:////mlflow/mlflow.db
+        --artifacts-destination /mlflow/artifacts
+        --serve-artifacts
+      volumes:
+        - mlflow_data:/mlflow            # base de datos y modelos (persisten al borrar el contenedor)
 
-  # DASHBOARD: la aplicación Streamlit. Lee los datos de HDFS (red de Docker)
-  # y, si no puede, de los CSV de data/. Se abre en http://localhost:8501
-  dashboard:
-    build: ../dashboard                # se construye con dashboard/Dockerfile
-    container_name: dashboard
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8501:8501"          # http://localhost:8501
-    environment:
-      - HDFS_HOST=namenode             # dentro de Docker, HDFS se llama "namenode"
-      - HDFS_USER=root
-      - MLFLOW_TRACKING_URI=http://mlflow:5000   # las páginas de modelos y drift leen los experimentos por REST
-    volumes:
-      - ../:/app                       # todo el repositorio: /app/dashboard (código) y /app/data (CSV)
-    depends_on:
-      - namenode
-      - datanode
-      - mlflow
+    # DASHBOARD: la aplicación Streamlit. Lee los datos de HDFS (red de Docker)
+    # y, si no puede, de los CSV de data/. Se abre en http://localhost:8501
+    dashboard:
+      build: ../dashboard                # se construye con dashboard/Dockerfile
+      container_name: dashboard
+      restart: unless-stopped
+      ports:
+        - "127.0.0.1:8501:8501"          # http://localhost:8501
+      environment:
+        - HDFS_HOST=namenode             # dentro de Docker, HDFS se llama "namenode"
+        - HDFS_USER=root
+        - MLFLOW_TRACKING_URI=http://mlflow:5000   # las páginas de modelos y drift leen los experimentos por REST
+      volumes:
+        - ../:/app                       # todo el repositorio: /app/dashboard (código) y /app/data (CSV)
+      depends_on:
+        - namenode
+        - datanode
+        - mlflow
 
-  # API: FastAPI que sirve los dos modelos (clustering de platos y tiempo de preparación) leyéndolos de MLflow.
-  # Documentación interactiva -> http://localhost:8000/docs   (más detalles en api/README.md)
-  api:
-    build: ../api                      # se construye con api/Dockerfile (misma imagen base que Jupyter)
-    container_name: api
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8000:8000"          # http://localhost:8000
-    environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000   # de aquí saca los modelos con el alias "actual"
-      - RUTA_PLATOS_NUEVOS=/datos/platos_nuevos.csv   # CSV donde se guardan los platos añadidos desde la interfaz
-    volumes:
-      - ../data:/datos                 # carpeta data/ del repositorio (con escritura): ahí queda platos_nuevos.csv, y se puede subir a Git
-    depends_on:
-      - mlflow
-    healthcheck:                       # "healthy" cuando la API responde (aunque aún no haya modelos registrados)
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/salud', timeout=3)"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
+    # API: FastAPI que sirve los dos modelos (clustering de platos y tiempo de preparación) leyéndolos de MLflow.
+    # Documentación interactiva -> http://localhost:8000/docs   (más detalles en api/README.md)
+    api:
+      build: ../api                      # se construye con api/Dockerfile (misma imagen base que Jupyter)
+      container_name: api
+      restart: unless-stopped
+      ports:
+        - "127.0.0.1:8000:8000"          # http://localhost:8000
+      environment:
+        - MLFLOW_TRACKING_URI=http://mlflow:5000   # de aquí saca los modelos con el alias "actual"
+        - RUTA_PLATOS_NUEVOS=/datos/platos_nuevos.csv   # CSV donde se guardan los platos añadidos desde la interfaz
+      volumes:
+        - ../data:/datos                 # carpeta data/ del repositorio (con escritura): ahí queda platos_nuevos.csv, y se puede subir a Git
+      depends_on:
+        - mlflow
+      healthcheck:                       # "healthy" cuando la API responde (aunque aún no haya modelos registrados)
+        test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/salud', timeout=3)"]
+        interval: 30s
+        timeout: 5s
+        retries: 3
+        start_period: 20s
 
-  # INGESTA (opcional): vigila data/ y data/entrada/ y sube a HDFS cualquier CSV nuevo o cambiado.
-  # No arranca con "docker compose up": se activa con   docker compose --profile ingesta up -d ingesta
-  # Usa la imagen del namenode solo por tener el cliente `hdfs`; el script es scripts/ingesta_hdfs.sh.
-  ingesta:
-    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
-    container_name: ingesta
-    profiles: ["ingesta"]              # solo se levanta si se pide expresamente
-    restart: unless-stopped
-    environment:
-      - SERVICE_PRECONDITION=namenode:9000 namenode:9870 datanode:9864   # espera a que HDFS esté listo
-    env_file:
-      - ./hadoop.env                   # así el cliente sabe dónde está el namenode (fs.defaultFS)
-    command: ["bash", "/scripts/ingesta_hdfs.sh", "--vigilar", "30"]   # revisa cada 30 s
-    volumes:
-      - ../data:/datos:ro              # CSV de entrada (solo lectura)
-      - ../scripts:/scripts:ro
-    depends_on:
-      - namenode
-      - datanode
+    # INGESTA (opcional): vigila data/ y data/entrada/ y sube a HDFS cualquier CSV nuevo o cambiado.
+    # No arranca con "docker compose up": se activa con   docker compose --profile ingesta up -d ingesta
+    # Usa la imagen del namenode solo por tener el cliente `hdfs`; el script es scripts/ingesta_hdfs.sh.
+    ingesta:
+      image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+      container_name: ingesta
+      profiles: ["ingesta"]              # solo se levanta si se pide expresamente
+      restart: unless-stopped
+      environment:
+        - SERVICE_PRECONDITION=namenode:9000 namenode:9870 datanode:9864   # espera a que HDFS esté listo
+      env_file:
+        - ./hadoop.env                   # así el cliente sabe dónde está el namenode (fs.defaultFS)
+      command: ["bash", "/scripts/ingesta_hdfs.sh", "--vigilar", "30"]   # revisa cada 30 s
+      volumes:
+        - ../data:/datos:ro              # CSV de entrada (solo lectura)
+        - ../scripts:/scripts:ro
+      depends_on:
+        - namenode
+        - datanode
 
-# Volúmenes con nombre: Docker los guarda aparte, así los datos de HDFS
-# sobreviven a "docker compose down". Solo "down -v" los borra.
-volumes:
-  namenode_data:
-  datanode_data:
-  mlflow_data:
+  # Volúmenes con nombre: Docker los guarda aparte, así los datos de HDFS
+  # sobreviven a "docker compose down". Solo "down -v" los borra.
+  volumes:
+    namenode_data:
+    datanode_data:
+    mlflow_data:
