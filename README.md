@@ -52,6 +52,7 @@ La primera vez, Docker descarga las imágenes y construye los servicios del dash
 ```powershell
 docker compose ps
 ```
+Tienes que ver los contenedores `namenode`, `datanode`, `resourcemanager`, `nodemanager` y `jupyter` con estado **Up**.
 
 Si un servicio tarda en arrancar o muestra un error, consulta sus registros. Por ejemplo:
 
@@ -62,14 +63,6 @@ docker compose logs --tail 100 dashboard
 
 ## Cargar los datos en HDFS
 
-Guarda estos dos archivos en `data/`, en la raíz del repositorio:
-
-```text
-data/01_ventas_diarias_platos.csv
-data/02_pedidos_tiempos_preparacion.csv
-```
-
-La información de la carta que necesita este trabajo está integrada en esos datos; no se requiere un CSV de carta separado.
 
 Con los contenedores en marcha, ejecuta desde la carpeta `docker`:
 
@@ -85,15 +78,49 @@ docker exec namenode hdfs dfs -ls -R /datalake
 
 El script crea la carpeta `clean`, pero no genera los Parquet limpios. Esos archivos se producen al ejecutar el proceso de limpieza correspondiente en los notebooks. El dashboard puede usar los CSV locales para algunas vistas; las vistas limpias necesitan que existan los Parquet que espera la aplicación.
 
-## Usar Jupyter
+## Usar los diferentes contenedores
 
-Abre [http://localhost:8889](http://localhost:8889). La carpeta del repositorio está disponible dentro de Jupyter en:
+### Opción A · Ejecutar los notebooks (entrenar y ver los modelos)
 
-```text
-/home/jovyan/work
-```
+1. Abre Jupyter en el navegador: <http://localhost:8889>
+2. Contraseña (token): `smartrestaurant`
+3. Entra en la carpeta `work/notebooks/` y ejecuta **en orden**:
 
-Los notebooks están en `notebooks/`. Sigue el orden y las indicaciones de cada notebook. Los cambios guardados en esa carpeta se reflejan en el repositorio local.
+| Notebook | Para qué sirve |
+|---|---|
+| `00_prueba_conexion_hdfs.ipynb` | Comprueba que Jupyter lee y escribe en HDFS |
+| `01_ventas_diarias_platos.csv` | Limpieza de datos y modelo del **objetivo 1** (clustering de platos) |
+| `02_pedidos_tiempos_preparacion.csv` | Limpieza de datos y modelo del **objetivo 2** (tiempo de preparación) |
+
+<!-- VERIFICAR: poner los nombres exactos de los notebooks 01 y 02 del repo -->
+
+Cada notebook guarda los datos limpios en formato Parquet en `/datalake/clean`.
+
+Para el objetivo 2 se comparan tres modelos: **regresión lineal, KNN y Random Forest**.
+
+### Opción B · Ver los experimentos en MLflow
+
+Cada ejecución de los modelos queda registrada en **MLflow** (parámetros, métricas y versión del modelo, con fecha y hora), para comparar unos intentos con otros.
+
+<!-- VERIFICAR: dirección y forma de arrancar MLflow en el repositorio (por ejemplo http://localhost:5000) -->
+Abre MLflow en: <http://localhost:5000>
+
+### Opción C · Dashboard (Streamlit)
+
+Muestra los datos antes y después de la limpieza (RAW frente a CLEAN) leídos desde HDFS:
+
+<!-- VERIFICAR: si el dashboard es un servicio del docker-compose, basta con docker compose up -d -->
+👉 <http://localhost:8501>
+
+### Opción D · API (FastAPI)
+
+La API permite pedir una predicción desde cualquier programa, sin abrir los notebooks.
+
+<!-- VERIFICAR: solo dejar esta sección si la API ya está hecha. Confirmar puerto, rutas y campos -->
+- Documentación interactiva: <http://localhost:8000/docs>
+- Si los datos enviados no son válidos, la API devuelve un mensaje de error que explica qué falla.
+
+---
 
 ## Detener y volver a iniciar
 
@@ -131,3 +158,23 @@ smart-restaurant/
 ├── notebooks/       Análisis y modelado
 └── scripts/         Scripts auxiliares, incluida la carga a HDFS
 ```
+## Cómo funciona por dentro (resumen)
+
+```
+CSV (data/) ──► HDFS /datalake/raw ──► Jupyter: limpieza ──► HDFS /datalake/clean (Parquet) ──► modelos ──► MLflow / Dashboard / API
+```
+
+- **raw**: copia fiel de los datos originales. No se toca nunca.
+- **clean**: datos ya limpios, en Parquet.
+- Jupyter lee y escribe en HDFS a través de WebHDFS.
+
+## Limitaciones
+
+- Datos sintéticos: no se pueden extraer conclusiones sobre restaurantes reales.
+- Entorno de aprendizaje: un solo nodo, replicación 1 y permisos de HDFS desactivados. No es apto para producción.
+- Las imágenes de Hadoop (`bde2020`, versión 3.2.1) son antiguas y ya no tienen mantenimiento.
+
+## Equipo
+
+Maitane Herrera · Julen Altuna · Ignacio Pérez — Curso de especialización en Inteligencia Artificial y Big Data.
+
