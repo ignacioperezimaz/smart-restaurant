@@ -11,11 +11,16 @@ import importlib
 
 import estilo
 import load_data
+import pag_drift
+import pag_exploracion
+import pag_modelos
 
 # Streamlit solo recarga app.py al editarlo; estos dos módulos se quedaban en memoria con la versión vieja.
 # Recargarlos aquí hace que los cambios en estilo.py y load_data.py se vean sin reiniciar el contenedor.
 importlib.reload(estilo)
 importlib.reload(load_data)
+for _m in (pag_exploracion, pag_modelos, pag_drift):     # las páginas nuevas, igual: sin reiniciar el contenedor
+    importlib.reload(_m)
 from load_data import HDFS_HOST, HDFS_PORT, HDFS_USER, cargar_clean, cargar_raw
 
 estilo.configurar("Smart Restaurant · Dashboard")  # debe ir antes de cualquier otro st.*
@@ -233,11 +238,24 @@ def pagina_hdfs() -> None:
 
 
 # ---------------------------------------------------------------- menú lateral + cabecera común
-menu = st.navigation([
-    st.Page(pagina_pedidos, title="Pedidos", icon=":material/receipt_long:", url_path="pedidos", default=True),
-    st.Page(pagina_ventas, title="Ventas", icon=":material/storefront:", url_path="ventas"),
-    st.Page(pagina_hdfs, title="Estructura HDFS", icon=":material/account_tree:", url_path="hdfs"),
-])
+menu = st.navigation({
+    "Datos": [
+        st.Page(pagina_pedidos, title="Pedidos", icon=":material/receipt_long:", url_path="pedidos", default=True),
+        st.Page(pagina_ventas, title="Ventas", icon=":material/storefront:", url_path="ventas"),
+        st.Page(pagina_hdfs, title="Estructura HDFS", icon=":material/account_tree:", url_path="hdfs"),
+    ],
+    "Exploración": [
+        st.Page(pag_exploracion.pagina_eda_pedidos, title="Pedidos: qué los hace tardar", icon=":material/query_stats:", url_path="eda-pedidos"),
+        st.Page(pag_exploracion.pagina_eda_ventas, title="Ventas: cómo se venden los platos", icon=":material/bar_chart:", url_path="eda-ventas"),
+    ],
+    "Modelos": [
+        st.Page(pag_modelos.pagina_clustering, title="Clustering de platos", icon=":material/bubble_chart:", url_path="clustering"),
+        st.Page(pag_modelos.pagina_regresion, title="Tiempo de preparación", icon=":material/timer:", url_path="regresion"),
+    ],
+    "Monitorización": [
+        st.Page(pag_drift.pagina_drift, title="Drift del modelo", icon=":material/monitor_heart:", url_path="drift"),
+    ],
+})
 
 with st.container(border=True):
     col_logo, col_titulo = st.columns([1, 5], vertical_alignment="center")

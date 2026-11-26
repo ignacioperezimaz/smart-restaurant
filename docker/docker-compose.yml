@@ -113,11 +113,13 @@ services:
     environment:
       - HDFS_HOST=namenode             # dentro de Docker, HDFS se llama "namenode"
       - HDFS_USER=root
+      - MLFLOW_TRACKING_URI=http://mlflow:5000   # las páginas de modelos y drift leen los experimentos por REST
     volumes:
       - ../:/app                       # todo el repositorio: /app/dashboard (código) y /app/data (CSV)
     depends_on:
       - namenode
       - datanode
+      - mlflow
 
   # API: FastAPI que sirve los dos modelos (clustering de platos y tiempo de preparación) leyéndolos de MLflow.
   # Documentación interactiva -> http://localhost:8000/docs   (más detalles en api/README.md)

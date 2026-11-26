@@ -32,8 +32,6 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from scipy import stats
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # ----------------------------------------------------------------------------------------------
 # Umbrales (en un solo sitio para poder cambiarlos fácilmente)
@@ -80,6 +78,7 @@ def nivel_psi(psi: float) -> str:
 
 def data_drift(ref: pd.DataFrame, nuevo: pd.DataFrame, numericas: list[str], categoricas: list[str]) -> pd.DataFrame:
     """Una fila por variable: PSI + nivel + test (KS o chi²) + cómo se ha movido (media o categoría principal)."""
+    from scipy import stats      # solo aquí: así el PSI se puede usar (p. ej. en el dashboard) sin instalar scipy
     filas = []
     for v in numericas:
         psi = psi_numerica(ref[v], nuevo[v])
@@ -111,6 +110,7 @@ def data_drift(ref: pd.DataFrame, nuevo: pd.DataFrame, numericas: list[str], cat
 # ----------------------------------------------------------------------------------------------
 def metricas(reales, predichos) -> dict[str, float]:
     """MAE y RMSE (minutos), R² y sesgo (media de real − predicho: positivo = el modelo se queda corto)."""
+    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score   # solo aquí (el dashboard no las necesita)
     reales = np.asarray(reales, float)
     predichos = np.asarray(predichos, float)
     return {"mae": float(mean_absolute_error(reales, predichos)),
