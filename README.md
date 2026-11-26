@@ -80,7 +80,7 @@ El script crea la carpeta `clean`, pero no genera los Parquet limpios. Esos arch
 
 ## Usar los diferentes contenedores
 
-### Opción A · Ejecutar los notebooks (entrenar y ver los modelos)
+### 1 · Ejecutar los notebooks (entrenar y ver los modelos)
 
 1. Abre Jupyter en el navegador: <http://localhost:8889>
 2. Contraseña (token): `smartrestaurant`
@@ -89,23 +89,29 @@ El script crea la carpeta `clean`, pero no genera los Parquet limpios. Esos arch
 | Notebook | Para qué sirve |
 |---|---|
 | `00_prueba_conexion_hdfs.ipynb` | Comprueba que Jupyter lee y escribe en HDFS |
-| `01_ventas_diarias_platos.csv` | Limpieza de datos y modelo del **objetivo 1** (clustering de platos) |
-| `02_pedidos_tiempos_preparacion.csv` | Limpieza de datos y modelo del **objetivo 2** (tiempo de preparación) |
+| `01_EDA_objetivo1.ipynb` | Limpieza de datos del **objetivo 1** (clustering de platos) |
+| `02_EDA_pedidos_tiempos_preparacion.ipynb` | Limpieza de datos del **objetivo 2** (tiempo de preparación) |
+| `03_exploracion_ventas_clustering.ipynb` | Exploración de los datos limpios del **objetivo 1** (clustering de platos) |
+| `04_modelo_clustering_platos.ipynb` | Modelo del **objetivo 1** (clustering de platos) |
+| `05_exploracion_pedidos_regresion.ipynb` | Exploración de los datos limpios del **objetivo 2** (tiempo de preparación) |
+| `06_modelo_regresion_tiempos.ipynb` | Modelo del **objetivo 2** (tiempo de preparación) |
+| `07_monitorizacion_drift.ipynb` | Monitorizacion del drift |
 
-<!-- VERIFICAR: poner los nombres exactos de los notebooks 01 y 02 del repo -->
 
 Cada notebook guarda los datos limpios en formato Parquet en `/datalake/clean`.
 
 Para el objetivo 2 se comparan tres modelos: **regresión lineal, KNN y Random Forest**.
 
-### Opción B · Ver los experimentos en MLflow
+**IMPORTANTE: Antes de ejecutar MLflow ejecuta todas las celdas de cada notebook en orden, menos `00_prueba_conexion_hdfs.ipynb`.**
+
+### 2 · Ver los experimentos en MLflow
 
 Cada ejecución de los modelos queda registrada en **MLflow** (parámetros, métricas y versión del modelo, con fecha y hora), para comparar unos intentos con otros.
 
 <!-- VERIFICAR: dirección y forma de arrancar MLflow en el repositorio (por ejemplo http://localhost:5000) -->
 Abre MLflow en: <http://localhost:5000>
 
-### Opción C · Dashboard (Streamlit)
+### 3 · Dashboard (Streamlit)
 
 Muestra los datos antes y después de la limpieza (RAW frente a CLEAN) leídos desde HDFS:
 
